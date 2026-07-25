@@ -12,3 +12,114 @@ datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
+
+// ============================================================
+// USUARIOS Y ROLES (Fase 1 — auth)
+// ============================================================
+
+// Tabla central de autenticación.
+// Cualquier persona que se loguea es un Usuario. El rol determina qué endpoints puede usar.
+model Usuario {
+  id              Int       @id @default(autoincrement())
+  email           String    @unique
+  passwordHash    String    @map("password_hash")
+  rol             RolUsuario
+  activo          Boolean   @default(true)
+
+  nombre          String
+  apellido        String
+  telefono        String?
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  ultimoLoginAt   DateTime? @map("ultimo_login_at")
+
+  productor       Productor?
+  proveedor       Proveedor?
+  refreshTokens   RefreshToken[]
+
+  @@map("usuarios")
+}
+
+enum RolUsuario {
+  PRODUCTOR
+  PROVEEDOR
+  ADMIN
+  OPERADOR
+  CONTADOR
+  OPERADOR_DEPOSITO
+}
+
+// Extensión del Usuario cuando el rol es PRODUCTOR.
+model Productor {
+  id                Int      @id @default(autoincrement())
+  usuarioId         Int      @unique @map("usuario_id")
+  usuario           Usuario  @relation(fields: [usuarioId], references: [id])
+
+  razonSocial       String   @map("razon_social")
+  cuit              String   @unique
+  condicionFiscal   CondicionFiscal @map("condicion_fiscal")
+  domicilioFiscal   String   @map("domicilio_fiscal")
+  localidad         String
+
+  // Para tracking de aprobación por AUT (regla D.3)
+  aprobado          Boolean  @default(false)
+  aprobadoAt        DateTime? @map("aprobado_at")
+
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("productores")
+}
+
+enum CondicionFiscal {
+  RESPONSABLE_INSCRIPTO
+  MONOTRIBUTISTA
+  EXENTO
+  CONSUMIDOR_FINAL
+}
+
+// Extensión del Usuario cuando el rol es PROVEEDOR. Régimen cerrado: AUT da de alta manualmente (regla C.4).
+model Proveedor {
+  id                Int      @id @default(autoincrement())
+  usuarioId         Int      @unique @map("usuario_id")
+  usuario           Usuario  @relation(fields: [usuarioId], references: [id])
+
+  razonSocial       String   @map("razon_social")
+  cuit              String   @unique
+  condicionFiscal   CondicionFiscal @map("condicion_fiscal")
+  domicilioFiscal   String   @map("domicilio_fiscal")
+
+  estadoAprobacion  EstadoAprobacion @default(PENDIENTE) @map("estado_aprobacion")
+  notasInternas     String?  @map("notas_internas") @db.Text
+
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("proveedores")
+}
+
+enum EstadoAprobacion {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+  SUSPENDIDO
+}
+
+// ============================================================
+// SEGURIDAD
+// ============================================================
+
+// Refresh tokens para renovar access tokens. Se rota en cada uso (single-use).
+model RefreshToken {
+  id                Int      @id @default(autoincrement())
+  usuarioId         Int      @map("usuario_id")
+  usuario           Usuario  @relation(fields: [usuarioId], references: [id])
+
+  tokenHash         String   @unique @map("token_hash")
+  expiraAt          DateTime @map("expira_at")
+  revocadoAt        DateTime? @map("revocado_at")
+
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([usuarioId])
+  @@map("refresh_tokens")
+}

@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { LoginPage } from './features/auth/pages/LoginPage';
+import { RegisterPage } from './features/auth/pages/RegisterPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,6 +26,8 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/registro" element={<RegisterPage />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

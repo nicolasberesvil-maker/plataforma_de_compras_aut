@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
 import { errorHandler } from './middlewares/error.middleware.js';
+import authRoutes from './modules/auth/auth.routes.js';
 
 const app = express();
 
@@ -21,9 +22,9 @@ app.use(cookieParser());
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
-// TODO: aquí van los routers de cada módulo (los va a sumar cada fase)
-// import authRoutes from './modules/auth/auth.routes.js';
-// app.use('/api/auth', authRoutes);
+app.use('/api/auth', authRoutes);
+
+// TODO: aquí van los routers del resto de módulos (los va a sumar cada fase)
 
 // 404 handler
 app.use((req, res) => {
