@@ -36,3 +36,18 @@ export function useRegister() {
     mutationFn: (datos) => authApi.register(datos)
   });
 }
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (email) => authApi.forgotPassword(email)
+  });
+}
+
+export function useResetPassword() {
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: ({ token, nuevaPassword }) => authApi.resetPassword(token, nuevaPassword),
+    onSuccess: () => navigate('/login')
+  });
+}

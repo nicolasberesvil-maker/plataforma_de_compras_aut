@@ -2,13 +2,16 @@ import http from 'http';
 import app from './app.js';
 import { env } from './config/env.js';
 import { logger } from './utils/logger.js';
-// import { socketService } from './services/socket.service.js';
-// import { iniciarJobs } from './jobs/index.js';
+import { registrarListenersNotificaciones } from './modules/notificaciones/notificaciones.listeners.js';
+import { iniciarJobs } from './jobs/index.js';
+import { socketService } from './services/socket.service.js';
 
 const httpServer = http.createServer(app);
 
-// socketService.iniciar(httpServer);  // se activa en Fase 5 cuando empiezan notif
-// iniciarJobs();                       // se activa en Fase 4 con cron de campañas
+registrarListenersNotificaciones();
+
+socketService.iniciar(httpServer);
+iniciarJobs();
 
 httpServer.listen(env.PORT, () => {
   logger.info(`Backend escuchando en puerto ${env.PORT}`);

@@ -205,6 +205,56 @@ Base: `/api/productos`
 
 ---
 
+## Módulo: Solicitudes de Compra (pre-intención del productor)
+
+Base: `/api/solicitudes`
+
+> Punto de entrada "bottom-up" del flujo (ver `02-MODELO-DATOS.md` nota #9): el productor pide un producto sin que exista campaña todavía. El ADMIN decide si la agrupa en un requerimiento o la descarta.
+
+| Método | Ruta | Roles | Descripción |
+|--------|------|-------|-------------|
+| POST | `/` | PRODUCTOR | Cargar una solicitud (producto, volumen, fecha deseada, dirección/depósito, forma de pago) |
+| GET | `/mias` | PRODUCTOR | Listar mis solicitudes (con su estado) |
+| GET | `/` | ADMIN, OPERADOR | Listar solicitudes (filtro por `estado`, `productoId`) — bandeja de pendientes |
+| GET | `/:id` | PRODUCTOR (owner), ADMIN | Detalle |
+| PUT | `/:id` | PRODUCTOR (owner) | Editar (solo mientras esté PENDIENTE) |
+| DELETE | `/:id` | PRODUCTOR (owner) | Retirar (solo mientras esté PENDIENTE) |
+| PATCH | `/:id/descartar` | ADMIN | Descartar solicitud (body: `{ motivo }`) |
+| POST | `/agrupar` | ADMIN | Agrupa 1+ solicitudes en una `Campana` nueva (crea la campaña + convierte cada solicitud en `IntencionCompra` + notifica) |
+
+### Body de POST `/`
+
+```json
+{
+  "productoId": 12,
+  "volumenDeseado": 500,
+  "fechaDeseada": "2026-09-15T00:00:00Z",
+  "modalidadEntregaPreferida": "ENTREGA_EN_CAMPO",
+  "direccionEntrega": "Campo La Esperanza, Ruta 13 km 4, Franck",
+  "formaPagoPreferida": "CANJE_CEREAL",
+  "observaciones": "Si se puede, antes de la siembra"
+}
+```
+
+Si `modalidadEntregaPreferida` es `RETIRO_EN_DEPOSITO`, se envía `depositoPreferidoId` en vez de `direccionEntrega`.
+
+### Body de POST `/agrupar`
+
+```json
+{
+  "solicitudIds": [101, 104, 109],
+  "nombre": "Glifosato 48% - Octubre 2026",
+  "fechaCierre": "2026-09-17T23:59:59Z",
+  "fechaEstimadaRecepcion": "2026-10-05T00:00:00Z",
+  "volumenMinimo": 5000,
+  "horasLockoutEdicion": 24
+}
+```
+
+`fechaCierre` viene **pre-cargada en el formulario a "ahora + 48 hs"** como sugerencia (regla del negocio: "recomendado 48 hs"), pero el ADMIN puede modificarla — no es una validación dura. La respuesta es la `Campana` creada, ya en estado `ABIERTA`, con las intenciones generadas.
+
+---
+
 ## Módulo: Campañas
 
 Base: `/api/campanas`
@@ -234,9 +284,12 @@ Base: `/api/campanas`
   "fechaApertura": "2026-09-01T00:00:00Z",
   "fechaCierre": "2026-09-30T23:59:59Z",
   "fechaCierreCotizaciones": "2026-10-07T23:59:59Z",
+  "fechaEstimadaRecepcion": "2026-10-20T00:00:00Z",
   "horasLockoutEdicion": 24
 }
 ```
+
+`fechaEstimadaRecepcion` es la estimación temprana que el ADMIN comunica a los productores al abrir el requerimiento ("para cuándo se espera recibirlo"). Es distinta de `Entrega.fechaEstimada`, que se calcula recién al adjudicar en base al `plazoEntregaDias` del proveedor ganador (ver `02-MODELO-DATOS.md` nota sobre `Campana`).
 
 ### Response de `/:id/resumen` (vista pública)
 
@@ -280,10 +333,15 @@ Base: `/api/intenciones`
   "campanaId": 42,
   "volumen": 500,
   "observaciones": "Para los lotes del este",
-  "modalidadEntregaPreferida": "RETIRO_EN_DEPOSITO",
-  "depositoPreferidoId": 2
+  "fechaDeseada": "2026-09-20T00:00:00Z",
+  "modalidadEntregaPreferida": "ENTREGA_EN_CAMPO",
+  "direccionEntregaCampo": "Campo La Esperanza, Ruta 13 km 4, Franck",
+  "depositoPreferidoId": null,
+  "formaPagoPreferida": "TARJETA_AGRO"
 }
 ```
+
+`direccionEntregaCampo` es obligatoria cuando `modalidadEntregaPreferida = ENTREGA_EN_CAMPO` (se valida en el service); si es `RETIRO_EN_DEPOSITO` se usa `depositoPreferidoId` en su lugar. Estos son los lugares de entrega que el ADMIN vuelca en el pedido de cotización a proveedores (`GET /:id/intenciones`).
 
 ---
 
@@ -308,11 +366,14 @@ Base: `/api/cotizaciones`
   "precioUnitario": 1850.50,
   "monedaPrecio": "ARS",
   "plazoEntregaDias": 15,
-  "condicionesPago": "30 días contra factura. Sin anticipo.",
+  "tasaInteresMensual": 1.5,
+  "condicionesPago": "Precio de contado arriba. Financiado: 1,5% mensual acumulativo, hasta 6 cuotas.",
   "observaciones": "Stock disponible inmediato",
   "validaHasta": "2026-10-15T23:59:59Z"
 }
 ```
+
+`precioUnitario` es siempre el **precio de contado** (regla del negocio). `tasaInteresMensual` es el % mes a mes para pago financiado; se guarda como campo numérico (no solo texto en `condicionesPago`) para que el comparador de adjudicación pueda ordenar ofertas financiadas entre sí.
 
 ---
 
@@ -357,6 +418,46 @@ Base: `/api/ordenes`
 | GET | `/:id` | PRODUCTOR (owner), ADMIN, CONTADOR | Detalle |
 | PATCH | `/:id/forma-pago` | ADMIN, PRODUCTOR (owner) | Definir forma de pago y cuotas |
 | PATCH | `/:id/marcar-pagada` | ADMIN, CONTADOR | Confirmar cobro |
+
+---
+
+## Módulo: Cuenta Corriente (por productor)
+
+Base: `/api/productores/:productorId/cuenta-corriente`
+
+> AUT recibe la mercadería en su depósito y la va entregando a medida que cada productor la retira. Este endpoint responde "¿cuánto compró, cuánto ya le entregamos, cuánto le falta entregar y cuánto nos debe?" — sin tablas nuevas: es una agregación de `OrdenCompra` + `Entrega` + `StockMovimiento` (ver `13-FASE-8-DEPOSITOS-STOCK.md`).
+
+| Método | Ruta | Roles | Descripción |
+|--------|------|-------|-------------|
+| GET | `/api/productores/:productorId/cuenta-corriente` | ADMIN, CONTADOR, PRODUCTOR (mismo productor) | Estado de cuenta consolidado |
+
+### Response
+
+```json
+{
+  "productorId": 42,
+  "resumen": {
+    "totalOrdenado": 1850000,
+    "totalEntregado": 1200000,
+    "totalPendienteEntrega": 650000,
+    "montoTotalAdeudado": 620000
+  },
+  "porOrden": [
+    {
+      "ordenCompraId": 301,
+      "producto": "Glifosato 48%",
+      "volumenFinal": 500,
+      "volumenEntregado": 500,
+      "volumenPendiente": 0,
+      "estadoEntrega": "ENTREGADA",
+      "montoTotal": 925000,
+      "estadoPago": "PENDIENTE"
+    }
+  ]
+}
+```
+
+`volumenEntregado` se calcula sumando los `StockMovimiento` de tipo `EGRESO_PRODUCTOR` asociados a la `Entrega` de esa orden (o, directamente, si `Entrega.estado = ENTREGADA`, se toma `volumenFinal` completo — la orden es de todo-o-nada en v1, no hay entregas parciales).
 
 ---
 
@@ -460,7 +561,7 @@ Base: `/api/entregas`
 | PATCH | `/:id/en-transito` | ADMIN | Marcar EN_TRANSITO |
 | PATCH | `/:id/disponible` | ADMIN, OPERADOR_DEPOSITO | Marcar DISPONIBLE_PARA_RETIRO (genera notificación al productor) |
 | PATCH | `/:id/confirmar-retiro` | ADMIN, OPERADOR_DEPOSITO | Confirmar retiro (genera movimiento de egreso automático) |
-| PATCH | `/:id/confirmar-entrega-campo` | ADMIN | Confirmar entrega en campo |
+| PATCH | `/:id/confirmar-entrega-campo` | ADMIN, **PRODUCTOR (dueño)** | Confirmar entrega en campo — el productor tiene su propio botón para avisar que recibió la mercadería cuando la entrega es directa proveedor→productor |
 | PATCH | `/:id/cancelar` | ADMIN | Cancelar entrega |
 
 ### Body de PATCH `/:id/confirmar-retiro`
@@ -562,10 +663,10 @@ Conexión: `/socket.io` con token JWT como query param o header.
 | 2 — Usuarios | `/usuarios`, `/productores`, `/proveedores` |
 | 3 — Productos | `/productos` |
 | 4 — Campañas | `/campanas` (CRUD + estados) |
-| 5 — Intenciones | `/intenciones`, `/campanas/:id/intenciones`, `/campanas/:id/resumen` |
+| 5 — Intenciones y Solicitudes | `/intenciones`, `/solicitudes`, `/campanas/:id/intenciones`, `/campanas/:id/resumen` |
 | 6 — Cotizaciones | `/cotizaciones` |
 | 7 — Adjudicación | `/adjudicaciones`, `/ordenes` |
-| 8 — Depósitos y Stock | `/depositos`, `/stock-movimientos` |
+| 8 — Depósitos y Stock | `/depositos`, `/stock-movimientos`, `/productores/:id/cuenta-corriente` |
 | 9 — Entregas | `/entregas` |
 | 10 — Facturación | `/facturas` |
 | 11 — Dashboard | `/dashboard` |

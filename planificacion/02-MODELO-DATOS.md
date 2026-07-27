@@ -17,6 +17,8 @@ El modelo se organiza en 6 dominios:
 | Fiscal | `Factura`, `ItemFactura` |
 | Soporte | `Notificacion`, `RefreshToken`, `AuditoriaLog` |
 
+> **Nota de actualización (2026-07):** `IntencionCompra.campanaId` pasa a ser **nullable** para soportar el flujo bidireccional productor↔administrador descripto por AUT: un productor puede disparar el proceso ("necesito X para tal fecha") **antes** de que exista una `Campana`/requerimiento, cargando una `IntencionCompra` con `campanaId = null`. Ver nota #9 más abajo y `10-FASE-5-INTENCIONES.md`.
+
 ---
 
 ## ERD conceptual
@@ -74,6 +76,8 @@ El modelo se organiza en 6 dominios:
                   │   Producto   │ (referenciado por Campana, ItemFactura, StockMovimiento)
                   └──────────────┘
 ```
+
+> **No graficado arriba para no saturar el ASCII:** `IntencionCompra.campanaId` es opcional. Sin campaña (`campanaId = null`) es el pedido suelto que el productor carga por su cuenta (bottom-up); con campaña es la intención dentro de un requerimiento que el ADMIN ya abrió (top-down). "Agrupar" (Fase 5) es simplemente asignarle `campanaId` a intenciones sueltas existentes — no crea una entidad nueva. Ver nota #9.
 
 ---
 
@@ -215,7 +219,9 @@ enum EstadoAprobacion {
 // entre 21% y 10,5% según el tipo (regla B.2).
 model Producto {
   id                Int      @id @default(autoincrement())
-  nombre            String
+  // @unique porque el seed (08-FASE-3-PRODUCTOS.md) hace upsert por nombre
+  // para poder re-ejecutarse sin duplicar filas al importar el catálogo real.
+  nombre            String   @unique
   descripcion       String?  @db.Text
   categoria         CategoriaProducto
   unidadMedida      UnidadMedida @map("unidad_medida")
@@ -223,6 +229,7 @@ model Producto {
   activo            Boolean  @default(true)
 
   // Relaciones
+  intenciones       IntencionCompra[]
   campanas          Campana[]
   itemsFactura      ItemFactura[]
   movimientosStock  StockMovimiento[]
@@ -288,6 +295,15 @@ model Campana {
   fechaCierre       DateTime? @map("fecha_cierre")
   fechaCierreCotizaciones DateTime? @map("fecha_cierre_cotizaciones")
 
+  // Cuándo se espera que llegue la mercadería (regla nueva D.2). Es una
+  // ESTIMACIÓN DECLARATIVA que el ADMIN comunica al abrir/armar el
+  // requerimiento (ej: "se espera para fines de agosto"), ANTES de que
+  // exista siquiera una cotización. No confundir con `Entrega.fechaEstimada`,
+  // que es el dato concreto que se calcula DESPUÉS de adjudicar, a partir del
+  // `plazoEntregaDias` del proveedor ganador. Uno es la promesa temprana al
+  // productor; el otro es el compromiso logístico real post-adjudicación.
+  fechaEstimadaRecepcion DateTime? @map("fecha_estimada_recepcion")
+
   // Compras CONTINUA: el proceso "padre" (siempre abierto) agrupa demanda y,
   // cada vez que AUT decide comprar, genera una "tanda" hija (una Campana
   // COLECTIVA o DIRECTA) que sigue el flujo normal de adjudicación. Así la
@@ -342,30 +358,76 @@ enum TipoCompra {
   CONTINUA
 }
 
-// Intención de compra individual de un productor dentro de una campaña.
-// Es MODIFICABLE mientras la campaña esté ABIERTA (regla C.2).
-// NO es vinculante hasta que la campaña se adjudica.
+// Intención de compra individual de un productor. Es el ÚNICO punto de
+// entrada del productor al sistema de compras — no importa si ya hay una
+// campaña armada o no (regla D.1, nota #9 más abajo).
+//
+// - Con `campanaId` seteado: vive dentro de una `Campana` que el ADMIN ya
+//   abrió (camino top-down, Fase 4). Es MODIFICABLE mientras la campaña esté
+//   ABIERTA (regla C.2) y NO es vinculante hasta que la campaña se adjudica.
+// - Con `campanaId = null`: es un pedido suelto que el productor cargó por su
+//   cuenta, sin esperar que exista campaña (camino bottom-up, Fase 5). El
+//   ADMIN la ve en una bandeja de pendientes y "agrupa" una o más intenciones
+//   sueltas del mismo producto asignándoles el `campanaId` de una `Campana`
+//   nueva o existente — agrupar es un UPDATE de `campanaId`, no una
+//   conversión entre entidades distintas.
 model IntencionCompra {
   id                Int      @id @default(autoincrement())
-  campanaId         Int      @map("campana_id")
-  campana           Campana  @relation(fields: [campanaId], references: [id])
+
+  // Nullable: null = pedido suelto todavía sin campaña (bottom-up).
+  campanaId         Int?     @map("campana_id")
+  campana           Campana? @relation(fields: [campanaId], references: [id])
+
   productorId       Int      @map("productor_id")
   productor         Productor @relation(fields: [productorId], references: [id])
+
+  // Obligatorio siempre: cuando no hay campaña todavía, es la única forma de
+  // saber qué producto pidió el productor. Cuando se agrupa, debe coincidir
+  // con el producto de la Campana a la que se asigna (se valida en el service).
+  productoId        Int      @map("producto_id")
+  producto          Producto @relation(fields: [productoId], references: [id])
 
   volumen           Decimal  @db.Decimal(12, 2)
   observaciones     String?  @db.Text
 
+  // Para cuándo lo necesita el productor (regla D.1). Sirve de insumo para que
+  // el ADMIN defina `Campana.fechaEstimadaRecepcion` cuando arma el
+  // requerimiento a partir de varias intenciones con fechas distintas.
+  fechaDeseada      DateTime? @map("fecha_deseada")
+
   // Preferencias logísticas (regla A.2)
   modalidadEntregaPreferida ModalidadEntrega? @map("modalidad_entrega_preferida")
-  depositoPreferidoId       Int?              @map("deposito_preferido_id")
-  depositoPreferido         Deposito?         @relation(fields: [depositoPreferidoId], references: [id])
+  // FK a Deposito se agrega recién en la migración de Fase 8 (ese modelo
+  // todavía no existe). Hasta entonces, RETIRO_EN_DEPOSITO no fija depósito.
+  // Dirección puntual cuando modalidadEntregaPreferida = ENTREGA_EN_CAMPO.
+  // Se valida como obligatoria en el service para ese caso (ver Fase 5).
+  direccionEntregaCampo     String?  @map("direccion_entrega_campo") @db.Text
+
+  // Forma de pago que el productor PREFIERE (no es la definitiva: eso se fija
+  // en OrdenCompra.formaPago recién al adjudicar, cuando ya hay condiciones
+  // reales del proveedor ganador).
+  formaPagoPreferida        FormaPago? @map("forma_pago_preferida")
+
+  estado            EstadoIntencion @default(PENDIENTE)
+  motivoDescarte     String?  @map("motivo_descarte") @db.Text
 
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
-  // Un productor solo puede tener UNA intención por campaña
+  // Un productor solo puede tener UNA intención por campaña. No aplica a
+  // pedidos sueltos: MySQL no considera duplicados los NULL en un índice
+  // único, así que un mismo productor puede tener varias intenciones con
+  // campanaId = null (permitido, regla resuelta en PENDIENTES.md #1).
   @@unique([campanaId, productorId])
+  @@index([estado])
+  @@index([productoId, estado])
   @@map("intenciones_compra")
+}
+
+enum EstadoIntencion {
+  PENDIENTE   // Cargada por el productor. Suelta (sin campaña) o dentro de una ABIERTA.
+  AGRUPADA    // Suelta que el ADMIN incorporó a una Campana (quedó con campanaId set)
+  DESCARTADA  // El ADMIN decidió no avanzar con ella (solo aplica a las sueltas)
 }
 
 // Cotización de un proveedor en respuesta a una campaña en licitación.
@@ -377,9 +439,18 @@ model Cotizacion {
   proveedorId       Int      @map("proveedor_id")
   proveedor         Proveedor @relation(fields: [proveedorId], references: [id])
 
+  // Precio "de contado" (regla D.3): es la base sobre la que se calcula
+  // cualquier financiación, junto con tasaInteresMensual.
   precioUnitario    Decimal  @map("precio_unitario") @db.Decimal(12, 4)
   monedaPrecio      Moneda   @default(ARS) @map("moneda_precio")
   plazoEntregaDias  Int      @map("plazo_entrega_dias")
+
+  // % de interés mes a mes para pago financiado (regla D.3, ej: "1,5% mensual").
+  // Es un campo estructurado además de condicionesPago (texto libre) porque
+  // el comparador de adjudicación (Fase 7) necesita un número para poder
+  // ordenar/comparar ofertas financiadas entre proveedores, no solo texto.
+  tasaInteresMensual Decimal? @map("tasa_interes_mensual") @db.Decimal(5, 2)
+
   condicionesPago   String   @map("condiciones_pago") @db.Text
   observaciones     String?  @db.Text
   validaHasta       DateTime @map("valida_hasta")
@@ -414,6 +485,12 @@ model Adjudicacion {
   ahorroEstimadoTotal    Decimal? @map("ahorro_estimado_total") @db.Decimal(12, 2)
   precioMinoristaReferencia Decimal? @map("precio_minorista_referencia") @db.Decimal(12, 4)
 
+  // % de ahorro agregado (regla D.4): (precioMinoristaReferencia - precioFinalUnitario) / precioMinoristaReferencia.
+  // Se guarda como snapshot (igual que ahorroEstimadoTotal) para que el
+  // dashboard y las notificaciones no dependan de recalcular con precios que
+  // cambian con el tiempo. Ver nota #3 más abajo.
+  porcentajeAhorro       Decimal? @map("porcentaje_ahorro") @db.Decimal(5, 2)
+
   motivoEleccion    String?  @db.Text
 
   adjudicadaAt      DateTime @default(now()) @map("adjudicada_at")
@@ -439,6 +516,12 @@ model OrdenCompra {
   subtotal          Decimal  @db.Decimal(14, 2)
   iva               Decimal  @db.Decimal(14, 2)
   total             Decimal  @db.Decimal(14, 2)
+
+  // Ahorro individual de ESTE productor en ESTA orden (regla D.4), prorrateado
+  // desde Adjudicacion.ahorroEstimadoTotal según su volumenFinal. Se muestra en
+  // la notificación ORDEN_GENERADA ("te ahorraste $X, un Y% vs. comprar solo").
+  ahorroEstimado    Decimal? @map("ahorro_estimado") @db.Decimal(14, 2)
+  porcentajeAhorro  Decimal? @map("porcentaje_ahorro") @db.Decimal(5, 2)
 
   estadoPago        EstadoPago @default(PENDIENTE) @map("estado_pago")
   formaPago         FormaPago? @map("forma_pago")
@@ -691,6 +774,9 @@ model Notificacion {
 }
 
 enum TipoNotificacion {
+  SOLICITUD_RECIBIDA      // Para ADMIN/OPERADOR: un productor cargó una solicitud suelta
+  SOLICITUD_AGRUPADA      // Para el productor: su solicitud se sumó a un requerimiento
+  SOLICITUD_DESCARTADA    // Para el productor: el ADMIN no avanzó con su solicitud
   CAMPANA_ABIERTA
   CAMPANA_PROXIMA_A_CERRAR
   CAMPANA_CERRADA
@@ -830,6 +916,24 @@ Consecuencias en el modelo:
 - `volumenMinimo` y `fechaCierre` pasan a ser **nullable** (solo `COLECTIVA` los exige).
 - `CONTINUA` usa la self-relation `campanaPadre` / `tandas`: el proceso continuo no se adjudica a sí mismo; genera campañas hijas ("tandas") que sí siguen el flujo normal. Así `Adjudicacion` sigue siendo 1:1 con la tanda y no hay que relajar esa restricción.
 - La máquina de estados deja de ser única: cada `tipo` tiene su mapa de transiciones válidas. Detalle en `09-FASE-4-CAMPANAS.md`.
+
+### 9. Flujo bidireccional: un solo modelo, `campanaId` nullable
+
+El sistema soporta dos puntos de entrada al mismo proceso de compra, ambos sobre el mismo modelo `IntencionCompra`:
+
+- **Top-down (Fase 4):** el ADMIN crea la `Campana` y la abre; los productores cargan `IntencionCompra` directamente dentro de ella (`campanaId` seteado desde el alta).
+- **Bottom-up (Fase 5, regla D.1):** un productor carga una `IntencionCompra` suelta (`campanaId = null`) diciendo qué necesita, para cuándo, a qué dirección y cómo prefiere pagar. El ADMIN la revisa en una bandeja de pendientes y, si decide avanzar, **agrupa** una o más intenciones sueltas (típicamente del mismo producto) en una `Campana`. Esa operación, en una transacción:
+  1. Crea la `Campana` (con `fechaCierre` sugerida a +48 hs y `fechaEstimadaRecepcion` que carga el ADMIN).
+  2. Hace `UPDATE` de `campanaId` y `estado = AGRUPADA` sobre cada `IntencionCompra` suelta incluida — no crea filas nuevas, no hay conversión entre entidades.
+  3. Abre la campaña (`ABIERTA`) y dispara `CAMPANA_ABIERTA` (a todos los productores, por si alguien más quiere sumarse) + `INTENCION_AGRUPADA` (personalizado, a cada productor cuya intención entró).
+
+El ADMIN también puede armar una `Campana` sin ninguna intención previa (el camino top-down de siempre) — ambos caminos conviven en la misma tabla porque `campanaId` es opcional.
+
+**Por qué se decidió unificar (en vez de `SolicitudCompra` + `IntencionCompra` separadas, que fue el diseño inicial):** conceptualmente ambas son la misma acción del productor — "necesito este producto" — con o sin campaña encima; separar la entidad solo agregaba una tabla y una conversión sin aportar una regla de negocio distinta. El costo (regla `@@unique([campanaId, productorId])` y validaciones como lockout/volumen máximo, que solo tienen sentido cuando hay campaña) se resuelve en el service con un simple `if (campanaId)`, no en el schema — y MySQL ya trata cada fila con `campanaId = null` como no-duplicada en el índice único, así que la regla de PENDIENTES.md #1 (permitir varios pedidos sueltos del mismo producto/productor) sale gratis.
+
+### 10. Entrega directa proveedor→productor: confirma el productor, no solo AUT
+
+Cuando la modalidad es `ENTREGA_EN_CAMPO`, la mercadería puede llegar directo del proveedor al campo del productor sin pasar por un depósito de AUT. En ese caso **el productor es quien está físicamente presente**, así que debe poder confirmar la recepción él mismo (botón "Confirmé que recibí mi pedido"), no depender de que un operador de AUT lo cargue después. Esto es un cambio de **autorización** sobre el endpoint ya existente `confirmar-entrega-campo` (ahora acepta `ADMIN` **o** `PRODUCTOR` dueño de la entrega), no un cambio de modelo — ver `14-FASE-9-ENTREGAS.md`.
 
 ---
 

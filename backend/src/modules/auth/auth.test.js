@@ -43,6 +43,7 @@ async function crearUsuarioActivo(email, password) {
 }
 
 afterAll(async () => {
+  await prisma.passwordResetToken.deleteMany({ where: { usuario: { email: { in: emailsCreados } } } });
   await prisma.refreshToken.deleteMany({ where: { usuario: { email: { in: emailsCreados } } } });
   await prisma.productor.deleteMany({ where: { usuario: { email: { in: emailsCreados } } } });
   await prisma.usuario.deleteMany({ where: { email: { in: emailsCreados } } });
@@ -150,6 +151,58 @@ describe('GET /api/auth/me', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.usuario.email).toBe(email);
+  });
+});
+
+describe('POST /api/auth/forgot-password', () => {
+  it('responde 200 aunque el email no exista (no filtra qué emails están registrados)', async () => {
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: `no-existe-${run}@test.com` });
+
+    expect(res.status).toBe(200);
+  });
+});
+
+describe('POST /api/auth/reset-password', () => {
+  it('rechaza un token inválido con 400', async () => {
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token: 'token-que-no-existe', nuevaPassword: 'nuevaClave123' });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('con un token válido cambia la contraseña, lo marca usado y revoca refresh tokens', async () => {
+    const email = `reset-ok-${run}@test.com`;
+    const usuario = await crearUsuarioActivo(email, 'clave12345');
+    const login = await request(app).post('/api/auth/login').send({ email, password: 'clave12345' });
+    const refreshCookie = login.headers['set-cookie'][0];
+
+    const tokenPlano = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(tokenPlano).digest('hex');
+    await prisma.passwordResetToken.create({
+      data: { usuarioId: usuario.id, tokenHash, expiraAt: new Date(Date.now() + 60 * 60 * 1000) }
+    });
+
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token: tokenPlano, nuevaPassword: 'claveNueva123' });
+    expect(res.status).toBe(200);
+
+    const loginViejo = await request(app).post('/api/auth/login').send({ email, password: 'clave12345' });
+    expect(loginViejo.status).toBe(401);
+
+    const loginNuevo = await request(app).post('/api/auth/login').send({ email, password: 'claveNueva123' });
+    expect(loginNuevo.status).toBe(200);
+
+    const refreshViejo = await request(app).post('/api/auth/refresh').set('Cookie', refreshCookie);
+    expect(refreshViejo.status).toBe(401);
+
+    const reusar = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token: tokenPlano, nuevaPassword: 'otraClave123' });
+    expect(reusar.status).toBe(400);
   });
 });
 

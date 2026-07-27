@@ -3,7 +3,9 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { prisma } from '../../config/database.js';
 import { env } from '../../config/env.js';
-import { UnauthorizedError, ConflictError } from '../../utils/errors.js';
+import { UnauthorizedError, ConflictError, ValidationError } from '../../utils/errors.js';
+import { parseDuracionMs } from '../../utils/duration.js';
+import { emailService } from '../../services/email.service.js';
 
 const BCRYPT_COST = 12;
 
@@ -123,6 +125,56 @@ export async function logout(refreshTokenPlano) {
   });
 }
 
+/**
+ * Genera un token de reseteo y envía el email con el link. Responde igual
+ * (no lanza) exista o no el email, para no filtrar qué emails están registrados.
+ */
+export async function solicitarResetPassword(email) {
+  const usuario = await prisma.usuario.findUnique({ where: { email } });
+  if (!usuario) return;
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashToken(token);
+  const expiraAt = new Date(Date.now() + parseDuracionMs('1h'));
+
+  await prisma.passwordResetToken.create({
+    data: { usuarioId: usuario.id, tokenHash, expiraAt }
+  });
+
+  await emailService.enviarPlantilla({
+    to: usuario.email,
+    template: 'reset_password',
+    variables: {
+      nombre: usuario.nombre,
+      link: `${env.FRONTEND_URL}/reset-password?token=${token}`
+    }
+  });
+}
+
+/**
+ * Valida el token, actualiza la contraseña, marca el token como usado y
+ * revoca todas las sesiones activas (refresh tokens) del usuario.
+ */
+export async function resetearPassword(tokenPlano, nuevaPassword) {
+  const tokenHash = hashToken(tokenPlano);
+  const registro = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+
+  if (!registro) throw new ValidationError('Token inválido');
+  if (registro.usadoAt) throw new ValidationError('Token ya utilizado');
+  if (registro.expiraAt < new Date()) throw new ValidationError('Token expirado');
+
+  const passwordHash = await bcrypt.hash(nuevaPassword, BCRYPT_COST);
+
+  await prisma.$transaction([
+    prisma.usuario.update({ where: { id: registro.usuarioId }, data: { passwordHash } }),
+    prisma.passwordResetToken.update({ where: { id: registro.id }, data: { usadoAt: new Date() } }),
+    prisma.refreshToken.updateMany({
+      where: { usuarioId: registro.usuarioId, revocadoAt: null },
+      data: { revocadoAt: new Date() }
+    })
+  ]);
+}
+
 // ============================================================
 // Helpers internos
 // ============================================================
@@ -139,8 +191,7 @@ async function generarRefreshToken(usuarioId) {
   // Token aleatorio (no JWT, no contiene info)
   const token = crypto.randomBytes(64).toString('hex');
   const tokenHash = hashToken(token);
-  const expiraAt = new Date();
-  expiraAt.setDate(expiraAt.getDate() + 7);
+  const expiraAt = new Date(Date.now() + parseDuracionMs(env.JWT_REFRESH_EXPIRES_IN));
 
   await prisma.refreshToken.create({
     data: { usuarioId, tokenHash, expiraAt }

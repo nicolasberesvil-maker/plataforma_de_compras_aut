@@ -15,6 +15,11 @@ La plataforma nació para el caso insignia de AUT: **compra colectiva** (agrupar
 | **DIRECTA** | Compra puntual/individual a un proveedor ya elegido, sin esperar juntar volumen ni licitar. Ej: un productor necesita 200 L ya, o AUT recompra un faltante. | No | No | Se adjudica al instante |
 | **CONTINUA** | Proceso permanente por producto. Los productores se van sumando y AUT compra por **tandas** cuando conviene. Ej: "Balanceado — pedido permanente". | Opcional (por tanda) | Por tanda | No cierra; genera tandas |
 
+**Dos formas de llegar a una `Campana` (regla D.1, detalle en Fase 5):**
+
+- **Top-down:** el ADMIN arma el requerimiento por su cuenta (el flujo que documenta esta fase) y avisa a los productores para que se sumen.
+- **Bottom-up:** un productor carga una `SolicitudCompra` suelta (sin campaña) pidiendo un producto; el ADMIN la ve en una bandeja de pendientes y, si decide avanzar, la **agrupa** junto con otras similares para crear la `Campana`. Esa operación (`POST /api/solicitudes/agrupar`, ver `10-FASE-5-INTENCIONES.md`) termina llamando a este mismo `campanaService.crear()` + `abrir()` — no duplica lógica, solo agrega el paso previo de recolectar solicitudes y convertirlas en `IntencionCompra`.
+
 **Decisión de arquitectura (fundamento):** NO se crean entidades nuevas (`CompraDirecta`, `CompraContinua`). Se generaliza `Campana` con un campo discriminador `tipo`. Motivo: todo el flujo aguas abajo —intención, cotización, adjudicación, orden, entrega, factura— ya cuelga de `Campana`. Un discriminador reutiliza esa cañería; entidades paralelas obligarían a duplicarla o a volver polimórficas todas las FKs, con más superficie de bug y peor auditabilidad fiscal. La palabra "campaña" queda como el nombre técnico del proceso; de cara al usuario se muestra el tipo.
 
 **CONTINUA — cómo funciona sin romper el modelo:** el proceso continuo es un "padre" siempre abierto que acumula intenciones. Cuando AUT decide comprar, dispara una **tanda**: se genera una campaña **hija** (COLECTIVA o DIRECTA) con las intenciones acumuladas, y esa hija sigue el flujo normal hasta adjudicar. Así `Adjudicacion` sigue siendo 1:1 con la tanda y no hay que relajar restricciones. El padre nunca se adjudica a sí mismo.
@@ -45,11 +50,16 @@ La plataforma nació para el caso insignia de AUT: **compra colectiva** (agrupar
 
 ### 1. Schema Prisma
 
-Agregar modelo `Campana`, enum `EstadoCampana` y enum `TipoCompra` (ver `02-MODELO-DATOS.md`, que es la fuente de verdad). Los cambios respecto de la versión inicial:
+Agregar modelo `Campana`, enum `EstadoCampana`, enum `TipoCompra` y un `IntencionCompra` **básico** (ver `02-MODELO-DATOS.md`, que es la fuente de verdad). Decisión clave (2026-07, confirmada con Nicolás): `IntencionCompra` es un solo modelo con `campanaId` **nullable**, no dos entidades separadas — así el productor emite la misma "intención de compra" tenga o no campaña encima. Ver nota #9 de `02-MODELO-DATOS.md`.
 
-- Campo `tipo TipoCompra @default(COLECTIVA)`.
-- `volumenMinimo` y `fechaCierre` pasan a **nullable** (solo COLECTIVA los exige).
+Detalle:
+
+- `Campana.tipo TipoCompra @default(COLECTIVA)`.
+- `Campana.volumenMinimo` y `Campana.fechaCierre` pasan a **nullable** (solo COLECTIVA los exige).
 - Self-relation `campanaPadre` / `tandas` para las tandas de CONTINUA.
+- `Campana.fechaEstimadaRecepcion` (nullable): la estimación temprana de cuándo llega el pedido, que el ADMIN comunica al abrir el requerimiento. Distinta de `Entrega.fechaEstimada` (Fase 9), que se calcula recién al adjudicar según el `plazoEntregaDias` del proveedor ganador.
+- `IntencionCompra` se crea ya en esta fase (no en Fase 5) porque el service de campañas de abajo la usa directamente (`obtenerResumen`, volumen acumulado). Fase 4 solo necesita: `campanaId` (nullable), `productorId`, `productoId`, `volumen`, `observaciones`, `estado` (`EstadoIntencion`) y `@@unique([campanaId, productorId])`. Los campos de preferencia logística/pago del productor (`fechaDeseada`, `modalidadEntregaPreferida`, `direccionEntregaCampo`, `formaPagoPreferida`) también quedan en el modelo desde ahora (están en `02-MODELO-DATOS.md`), pero **no tienen CRUD propio hasta Fase 5** — hoy solo campanas.service.js los toca de forma indirecta (agregación de volumen).
+- La FK de `IntencionCompra.depositoPreferidoId` hacia `Deposito` se agrega recién en la migración de Fase 8, cuando ese modelo exista.
 
 Migrar:
 
@@ -438,6 +448,8 @@ export const crearCampanaSchema = z.object({
   fechaApertura: z.coerce.date(),
   fechaCierre: z.coerce.date().optional(),
   fechaCierreCotizaciones: z.coerce.date().optional(),
+  // Estimación temprana de recepción, distinta de Entrega.fechaEstimada (post-adjudicación).
+  fechaEstimadaRecepcion: z.coerce.date().optional(),
   horasLockoutEdicion: z.number().int().nonnegative().default(0)
 });
 
@@ -603,6 +615,39 @@ export function CampanaCard({ campana }) {
 
 ---
 
+### 6. Auth: `forgot-password` / `reset-password` (heredado de Fase 1)
+
+> Resuelto en `DECISIONES-PENDIENTES.md` #5: estos dos endpoints ya estaban documentados en `03-API-ENDPOINTS.md` desde Fase 1, pero nunca se implementaron porque dependían de `email.service.js`, que recién se construye acá. Se implementan en esta fase, reutilizando la infra de Nodemailer/plantillas de la sección anterior — no arrancan un flujo de email por separado.
+
+Agregar al schema (`02-MODELO-DATOS.md`):
+
+```prisma
+model PasswordResetToken {
+  id         Int       @id @default(autoincrement())
+  usuarioId  Int       @map("usuario_id")
+  usuario    Usuario   @relation(fields: [usuarioId], references: [id])
+
+  tokenHash  String    @unique @map("token_hash")
+  expiraAt   DateTime  @map("expira_at")
+  usadoAt    DateTime? @map("usado_at")
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([usuarioId])
+  @@map("password_reset_tokens")
+}
+```
+
+Tareas en `backend/src/modules/auth/`:
+
+- `auth.service.js`: `solicitarResetPassword(email)` — genera un token random (igual patrón que `RefreshToken`: se guarda el hash, no el token plano), crea `PasswordResetToken` con expiración corta (1 hora), y llama a `emailService.enviarPlantilla` con el link (`${FRONTEND_URL}/reset-password?token=...`). Responde 200 **siempre**, exista o no el email, para no filtrar qué emails están registrados.
+- `auth.service.js`: `resetearPassword(token, nuevaPassword)` — busca el token por hash, valida que no esté vencido ni usado, actualiza `passwordHash` del usuario, marca el token como usado (`usadoAt`), y revoca todos los `RefreshToken` activos del usuario (si le resetearon la contraseña, las sesiones viejas no deberían seguir vivas).
+- `auth.schemas.js`: `forgotPasswordSchema` (`email`), `resetPasswordSchema` (`token`, `nuevaPassword` con la misma validación de fuerza que el registro).
+- `auth.routes.js`: `POST /forgot-password` y `POST /reset-password`, ambos públicos (sin `authenticate`).
+- Plantilla de email nueva: `email-templates/reset_password.html`.
+
+---
+
 ## Endpoints nuevos (actualizar también `03-API-ENDPOINTS.md`)
 
 A los endpoints de campañas ya previstos se suman dos acciones específicas por tipo:
@@ -650,6 +695,7 @@ El resto de transiciones (`abrir`, `cerrar-intenciones`, `cancelar`) siguen igua
 - [ ] Cron jobs registrados y probados (frecuencia de cada minuto para verificar) y solo tocan COLECTIVA.
 - [ ] Eventos `CAMPANA_ABIERTA`, `CAMPANA_CERRADA`, `RFQ_ABIERTO`, `COMPRA_DIRECTA_ADJUDICADA`, `TANDA_GENERADA` se emiten.
 - [ ] Frontend muestra listado y detalle con badges de tipo y acciones válidas por tipo.
+- [ ] `POST /api/auth/forgot-password` y `POST /api/auth/reset-password` operativos (migración `PasswordResetToken` incluida).
 - [ ] Coverage ≥ 60%.
 - [ ] Tag: `v0.4-fase-4-campanas`.
 

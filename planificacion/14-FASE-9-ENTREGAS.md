@@ -225,11 +225,28 @@ export async function confirmarRetiro(id, datos, usuarioId) {
   });
 }
 
-export async function confirmarEntregaCampo(id, datos) {
+/**
+ * Confirma entrega en campo. Puede ejecutarla el ADMIN (si AUT coordinó y le
+ * avisan) o el PRODUCTOR dueño de la entrega (regla nueva D.5): cuando el
+ * proveedor entrega directo en el campo, sin pasar por depósito de AUT, es el
+ * productor quien está físicamente presente para confirmar que recibió la
+ * mercadería — no tiene sentido obligarlo a esperar que un operador de AUT
+ * lo cargue después. Por eso la autorización se resuelve en el controller
+ * (`requireRole(['ADMIN']) OR ownership`), no acá: el service no conoce roles.
+ */
+export async function confirmarEntregaCampo(id, datos, usuario) {
   const entrega = await obtenerEntregaConValidacion(id, 'ENTREGADA');
 
   if (entrega.modalidad !== 'ENTREGA_EN_CAMPO') {
     throw new ValidationError('No es entrega tipo campo');
+  }
+
+  // Si quien confirma es el productor, valida que sea el dueño de la entrega.
+  if (usuario.rol === 'PRODUCTOR') {
+    const productor = await prisma.productor.findUnique({ where: { usuarioId: usuario.id } });
+    if (!productor || entrega.productorId !== productor.id) {
+      throw new ForbiddenError('Solo el productor dueño de la entrega puede confirmarla');
+    }
   }
 
   const actualizada = await prisma.entrega.update({
@@ -329,7 +346,33 @@ export function EntregaCard({ entrega }) {
           ✓ Listo para retirar
         </div>
       )}
+
+      {/* Botón de confirmación del PRODUCTOR (regla D.5): cuando el proveedor
+          entrega directo en el campo, AUT no está presente — el que confirma
+          que la mercadería llegó es el propio productor. */}
+      {entrega.modalidad === 'ENTREGA_EN_CAMPO' &&
+        ['EN_TRANSITO', 'EN_RUTA_A_CAMPO'].includes(entrega.estado) && (
+        <BotonConfirmarRecepcion entregaId={entrega.id} />
+      )}
     </div>
+  );
+}
+
+function BotonConfirmarRecepcion({ entregaId }) {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: () => entregasApi.confirmarEntregaCampo(entregaId, {}),
+    onSuccess: () => queryClient.invalidateQueries(['entregas'])
+  });
+
+  return (
+    <button
+      onClick={() => mutation.mutate()}
+      disabled={mutation.isPending}
+      className="w-full mt-3 bg-aut-verde text-white py-3 rounded-lg font-semibold disabled:opacity-50"
+    >
+      {mutation.isPending ? 'Confirmando...' : '✓ Confirmé que recibí mi pedido'}
+    </button>
   );
 }
 ```
@@ -343,6 +386,9 @@ export function EntregaCard({ entrega }) {
 - Confirmar retiro: genera movimiento stock EGRESO_PRODUCTOR con cantidad correcta.
 - Confirmar retiro en entrega ya ENTREGADA → 409.
 - Verificar atomicidad: si falla la creación del movimiento de stock, la entrega NO cambia de estado.
+- Productor dueño confirma `confirmar-entrega-campo` en su propia entrega ENTREGA_EN_CAMPO → 200.
+- Productor intenta confirmar la entrega de OTRO productor → 403.
+- ADMIN sigue pudiendo confirmar entrega en campo (ej: el productor llamó por teléfono y pide que AUT lo cargue).
 
 ---
 
@@ -352,6 +398,7 @@ export function EntregaCard({ entrega }) {
 - [ ] Util de transiciones de estado implementada y probada.
 - [ ] Notificación `ENTREGA_DISPONIBLE` llega al productor (email + campanita).
 - [ ] Confirmar retiro genera movimiento de stock automáticamente.
+- [ ] Productor tiene su propio botón para confirmar entrega directa proveedor→productor (sin depender de que AUT lo cargue).
 - [ ] Frontend muestra tablero admin y vista productor.
 - [ ] Coverage ≥ 60%.
 - [ ] Tag: `v0.9-fase-9-entregas`.

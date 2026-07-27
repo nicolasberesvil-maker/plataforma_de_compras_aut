@@ -9,7 +9,7 @@
 
 - Proveedor logueado ve las campañas en estado EN_LICITACION (sin ver intenciones individuales).
 - Solo ve el volumen consolidado, el producto y las condiciones requeridas.
-- Carga cotización con precio, plazo, condiciones, validez.
+- Carga cotización con precio de contado, plazo, % de interés mensual para financiado, condiciones, validez.
 - Puede editar su cotización mientras la campaña esté en licitación.
 - NO ve cotizaciones de otros proveedores (sobre cerrado, regla C.6).
 
@@ -179,6 +179,7 @@ export async function actualizar(id, datos, usuarioId) {
       precioUnitario: datos.precioUnitario,
       monedaPrecio: datos.monedaPrecio,
       plazoEntregaDias: datos.plazoEntregaDias,
+      tasaInteresMensual: datos.tasaInteresMensual,
       condicionesPago: datos.condicionesPago,
       observaciones: datos.observaciones,
       validaHasta: datos.validaHasta
@@ -211,9 +212,12 @@ import { z } from 'zod';
 
 export const crearCotizacionSchema = z.object({
   campanaId: z.number().int().positive(),
+  // Precio de contado (regla D.3): base para calcular cualquier financiación.
   precioUnitario: z.number().positive(),
   monedaPrecio: z.enum(['ARS', 'USD']).default('ARS'),
   plazoEntregaDias: z.number().int().positive(),
+  // % mensual para pago financiado. Opcional: hay proveedores que solo venden de contado.
+  tasaInteresMensual: z.number().min(0).max(50).optional(),
   condicionesPago: z.string().min(5).max(2000),
   observaciones: z.string().max(2000).optional(),
   validaHasta: z.coerce.date()
@@ -282,6 +286,7 @@ const schema = z.object({
   precioUnitario: z.coerce.number().positive(),
   monedaPrecio: z.enum(['ARS', 'USD']),
   plazoEntregaDias: z.coerce.number().int().positive(),
+  tasaInteresMensual: z.coerce.number().min(0).max(50).optional(),
   condicionesPago: z.string().min(5),
   observaciones: z.string().optional(),
   validaHasta: z.string()
@@ -325,6 +330,13 @@ export function CotizacionForm({ campana, cotizacionExistente, onSuccess }) {
       <div>
         <label>Plazo entrega (días)</label>
         <input {...register('plazoEntregaDias')} type="number" className="w-full px-3 py-2 border rounded" />
+      </div>
+
+      <div>
+        <label>% de interés mensual (financiado, opcional)</label>
+        <input {...register('tasaInteresMensual')} type="number" step="0.1"
+               placeholder="Ej: 1.5" className="w-full px-3 py-2 border rounded" />
+        <p className="text-xs text-gray-500 mt-1">Dejalo vacío si solo vendés de contado.</p>
       </div>
 
       <div>

@@ -13,6 +13,7 @@
 - ADMIN realiza transferencias entre depósitos.
 - Se puede consultar stock actual por depósito y por producto.
 - TODO movimiento queda persistido (append-only) con quien lo ejecutó, fecha y razón.
+- ADMIN/CONTADOR/productor puede consultar la **cuenta corriente de un productor**: cuánto compró, cuánto ya se le entregó, cuánto le falta entregar y cuánto adeuda.
 
 ---
 
@@ -323,7 +324,75 @@ export const transferenciaSchema = z.object({
 });
 ```
 
-### 4. Frontend: gestión de depósitos y stock (admin)
+### 4. Cuenta corriente por productor
+
+> AUT recibe la mercadería adjudicada en su depósito y la entrega a medida que cada productor pasa a buscarla (o coordina la entrega en campo). Mientras tanto, alguien tiene que saber: ¿cuánto le debemos entregar todavía a este productor? ¿Cuánto nos tiene que pagar? Esto NO es una tabla nueva — es una vista agregada sobre `OrdenCompra` + `Entrega`, en el módulo `productores` (reutiliza datos ya existentes, no duplica estado).
+
+```
+backend/src/modules/productores/
+└── productores.cuenta-corriente.js   # función agregada, se monta como sub-ruta de productores.routes.js
+```
+
+```javascript
+import { prisma } from '../../config/database.js';
+
+/**
+ * Estado de cuenta consolidado de un productor: qué compró, qué ya se le
+ * entregó y cuánto le falta, más el monto adeudado.
+ *
+ * Decisión de diseño: en v1 las órdenes son de "todo o nada" (no hay entregas
+ * parciales de una misma OrdenCompra — ver 02-MODELO-DATOS.md). Por eso
+ * "volumenEntregado" es simplemente volumenFinal cuando Entrega.estado =
+ * ENTREGADA, y 0 en cualquier otro estado. Si en v2 se necesitan entregas
+ * parciales, este es el único lugar que habría que tocar.
+ */
+export async function obtenerCuentaCorriente(productorId) {
+  const ordenes = await prisma.ordenCompra.findMany({
+    where: { productorId },
+    include: {
+      entrega: true,
+      adjudicacion: { include: { campana: { include: { producto: true } } } }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  const porOrden = ordenes.map(o => {
+    const entregado = o.entrega?.estado === 'ENTREGADA';
+    const volumenEntregado = entregado ? Number(o.volumenFinal) : 0;
+
+    return {
+      ordenCompraId: o.id,
+      producto: o.adjudicacion.campana.producto.nombre,
+      volumenFinal: Number(o.volumenFinal),
+      volumenEntregado,
+      volumenPendiente: Number(o.volumenFinal) - volumenEntregado,
+      estadoEntrega: o.entrega?.estado ?? 'PENDIENTE',
+      montoTotal: Number(o.total),
+      estadoPago: o.estadoPago
+    };
+  });
+
+  const resumen = porOrden.reduce((acc, o) => ({
+    totalOrdenado: acc.totalOrdenado + o.montoTotal,
+    totalEntregado: acc.totalEntregado + (o.volumenPendiente === 0 ? o.montoTotal : 0),
+    totalPendienteEntrega: acc.totalPendienteEntrega + (o.volumenPendiente > 0 ? o.montoTotal : 0),
+    montoTotalAdeudado: acc.montoTotalAdeudado + (o.estadoPago !== 'PAGADO' ? o.montoTotal : 0)
+  }), { totalOrdenado: 0, totalEntregado: 0, totalPendienteEntrega: 0, montoTotalAdeudado: 0 });
+
+  return { productorId, resumen, porOrden };
+}
+```
+
+Ruta (en `productores.routes.js`, roles `ADMIN`, `CONTADOR`, o el propio productor):
+
+```javascript
+router.get('/:id/cuenta-corriente',
+  requireRoleOrOwner(['ADMIN', 'CONTADOR'], 'productor'),
+  ctrl.obtenerCuentaCorriente
+);
+```
+
+### 5. Frontend: gestión de depósitos y stock (admin)
 
 ```
 frontend/src/features/depositos/
@@ -411,6 +480,7 @@ for (const d of depositosIniciales) {
 
 - [ ] Migración `add_depositos_stock` aplicada.
 - [ ] Endpoints `/api/depositos/*` y `/api/stock-movimientos/*` operativos.
+- [ ] Endpoint `/api/productores/:id/cuenta-corriente` devuelve totales consistentes con las órdenes y entregas reales.
 - [ ] Seed con depósitos iniciales (a confirmar lista real con AUT).
 - [ ] Frontend permite ver stock por depósito y registrar movimientos.
 - [ ] Coverage ≥ 60%.

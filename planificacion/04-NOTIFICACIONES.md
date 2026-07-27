@@ -70,6 +70,9 @@ Estos son todos los eventos que se emiten en v1. **Cada evento tiene su payload 
 
 | Evento | Cuándo se emite | Payload |
 |--------|-----------------|---------|
+| `SOLICITUD_RECIBIDA` | Un productor carga una `IntencionCompra` suelta (`campanaId = null`) | `{ intencionId, productoId, productorId }` |
+| `SOLICITUD_AGRUPADA` | El ADMIN agrupa la solicitud en una `Campana` | `{ solicitudId, productorId, campanaId, intencionId }` |
+| `SOLICITUD_DESCARTADA` | El ADMIN descarta la solicitud | `{ solicitudId, productorId, motivo }` |
 | `CAMPANA_CREADA` | AUT crea una campaña (queda en BORRADOR) | `{ campanaId, creadoPorId }` |
 | `CAMPANA_ABIERTA` | Transición BORRADOR → ABIERTA | `{ campanaId, productoId }` |
 | `CAMPANA_PROXIMA_A_CERRAR` | 48 hs antes del cierre (cron job) | `{ campanaId }` |
@@ -79,7 +82,7 @@ Estos son todos los eventos que se emiten en v1. **Cada evento tiene su payload 
 | `RFQ_ABIERTO` | Campaña pasa a EN_LICITACION | `{ campanaId, volumenConsolidado }` |
 | `COTIZACION_RECIBIDA` | Proveedor envía cotización | `{ cotizacionId, campanaId, proveedorId }` |
 | `CAMPANA_ADJUDICADA` | AUT adjudica | `{ adjudicacionId, campanaId, cotizacionGanadoraId }` |
-| `ORDEN_GENERADA` | Una orden derivada de adjudicación | `{ ordenId, productorId, campanaId }` |
+| `ORDEN_GENERADA` | Una orden derivada de adjudicación | `{ ordenId, productorId, campanaId, precioFinalUnitario, total, porcentajeAhorro }` |
 | `COTIZACION_RECHAZADA` | Cotización no fue elegida | `{ cotizacionId, proveedorId }` |
 | `ENTREGA_EN_TRANSITO` | Mercadería en camino | `{ entregaId, productorId }` |
 | `ENTREGA_DISPONIBLE` | Lista para retiro en depósito | `{ entregaId, productorId, depositoId }` |
@@ -105,6 +108,8 @@ import { logger } from '../../utils/logger.js';
  * Se llama una sola vez al iniciar la app.
  */
 export function registrarListenersNotificaciones() {
+  eventBus.on('SOLICITUD_RECIBIDA', onSolicitudRecibida);
+  eventBus.on('SOLICITUD_AGRUPADA', onSolicitudAgrupada);
   eventBus.on('CAMPANA_ABIERTA', onCampanaAbierta);
   eventBus.on('CAMPANA_PROXIMA_A_CERRAR', onCampanaProximaACerrar);
   eventBus.on('CAMPANA_ADJUDICADA', onCampanaAdjudicada);
@@ -115,6 +120,58 @@ export function registrarListenersNotificaciones() {
   // ... resto
 
   logger.info('Listeners de notificaciones registrados');
+}
+
+/**
+ * Notifica a todos los usuarios con rol ADMIN u OPERADOR que hay una
+ * solicitud nueva esperando revisión. Es el primer caso en el sistema donde
+ * el DESTINATARIO de la notificación es "el equipo de AUT" y no un productor
+ * o proveedor — por eso se agrega un helper simétrico al de
+ * `productorService.listarAprobados()`.
+ */
+async function onSolicitudRecibida({ solicitudId, productoId, productorId }) {
+  try {
+    const producto = await prisma.producto.findUnique({ where: { id: productoId } });
+    const staffAut = await prisma.usuario.findMany({
+      where: { rol: { in: ['ADMIN', 'OPERADOR'] }, activo: true }
+    });
+
+    for (const usuario of staffAut) {
+      await notificacionService.crearYEnviar({
+        usuarioId: usuario.id,
+        tipo: 'SOLICITUD_RECIBIDA',
+        titulo: 'Nueva solicitud de compra',
+        mensaje: `Un productor pidió ${producto.nombre}. Revisala para armar un requerimiento.`,
+        enlaceRelativo: `/admin/solicitudes/${solicitudId}`,
+        metadatos: { solicitudId, productoId, productorId }
+      });
+    }
+  } catch (err) {
+    logger.error({ err, event: 'SOLICITUD_RECIBIDA' }, 'Error notificando al equipo AUT');
+  }
+}
+
+/**
+ * Avisa puntualmente al productor que su solicitud entró en un requerimiento.
+ * Es DISTINTO de CAMPANA_ABIERTA (que es un aviso masivo a todos los
+ * productores aprobados): este es personalizado para quien la originó.
+ */
+async function onSolicitudAgrupada({ productorId, campanaId }) {
+  try {
+    const productor = await productorService.obtenerPorId(productorId);
+    const campana = await prisma.campana.findUnique({ where: { id: campanaId }, include: { producto: true } });
+
+    await notificacionService.crearYEnviar({
+      usuarioId: productor.usuarioId,
+      tipo: 'SOLICITUD_AGRUPADA',
+      titulo: 'Tu pedido se sumó a una compra colectiva',
+      mensaje: `Tu solicitud de ${campana.producto.nombre} se incluyó en "${campana.nombre}". Cierra el ${campana.fechaCierre?.toLocaleDateString('es-AR')}.`,
+      enlaceRelativo: `/campanas/${campanaId}`,
+      metadatos: { campanaId }
+    });
+  } catch (err) {
+    logger.error({ err, event: 'SOLICITUD_AGRUPADA' }, 'Error notificando al productor');
+  }
 }
 
 async function onCampanaAbierta({ campanaId, productoId }) {
@@ -137,17 +194,25 @@ async function onCampanaAbierta({ campanaId, productoId }) {
   }
 }
 
-async function onOrdenGenerada({ ordenId, productorId, campanaId }) {
+async function onOrdenGenerada({ ordenId, productorId, campanaId, precioFinalUnitario, total, porcentajeAhorro }) {
   try {
     const productor = await productorService.obtenerPorId(productorId);
+
+    // El productor tiene que enterarse EN EL MOMENTO de la adjudicación de que
+    // la compra se concretó, a qué precio, y cuánto se ahorró vs. comprar
+    // individual (regla D.4). Por eso el mensaje lleva esos datos en texto,
+    // no solo un link genérico — el productor lee esto por email en el campo.
+    const fraseAhorro = porcentajeAhorro
+      ? ` Ahorraste un ${Number(porcentajeAhorro).toFixed(1)}% comprando en grupo.`
+      : '';
 
     await notificacionService.crearYEnviar({
       usuarioId: productor.usuarioId,
       tipo: 'ORDEN_GENERADA',
-      titulo: 'Tu compra fue confirmada',
-      mensaje: `Se generó tu orden de compra. Revisá el detalle para conocer el precio final y la modalidad de entrega.`,
+      titulo: 'Tu compra se concretó',
+      mensaje: `Se confirmó tu compra a $${Number(precioFinalUnitario).toFixed(2)} por unidad (total $${Number(total).toFixed(2)}).${fraseAhorro}`,
       enlaceRelativo: `/ordenes/${ordenId}`,
-      metadatos: { ordenId, campanaId }
+      metadatos: { ordenId, campanaId, precioFinalUnitario, total, porcentajeAhorro }
     });
   } catch (err) {
     logger.error({ err, event: 'ORDEN_GENERADA' }, 'Error procesando evento');

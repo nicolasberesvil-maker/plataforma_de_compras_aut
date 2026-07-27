@@ -43,6 +43,10 @@ export function LoginForm() {
         {login.isPending ? 'Ingresando...' : 'Ingresar'}
       </button>
 
+      <p className="text-sm text-center">
+        <Link to="/forgot-password" className="text-gray-600">¿Olvidaste tu contraseña?</Link>
+      </p>
+
       <p className="text-sm text-center text-gray-600">
         ¿No tenés cuenta? <Link to="/registro" className="text-aut-verde font-medium">Registrate</Link>
       </p>

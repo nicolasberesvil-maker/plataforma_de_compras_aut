@@ -106,6 +106,7 @@ export async function obtenerComparador(campanaId) {
       precioUnitario: Number(c.precioUnitario),
       monedaPrecio: c.monedaPrecio,
       plazoEntregaDias: c.plazoEntregaDias,
+      tasaInteresMensual: c.tasaInteresMensual ? Number(c.tasaInteresMensual) : null,
       condicionesPago: c.condicionesPago,
       observaciones: c.observaciones,
       validaHasta: c.validaHasta,
@@ -155,6 +156,12 @@ export async function adjudicar(datos, usuario) {
     const ahorroEstimado = precioMinoristaReferencia
       ? (Number(precioMinoristaReferencia) - precioFinal) * volumenTotal
       : null;
+    // % de ahorro agregado (regla D.4): cuánto más barato salió comprar en
+    // grupo vs. el precio de referencia individual. Null si AUT no cargó
+    // precioMinoristaReferencia (no siempre lo tiene a mano al adjudicar).
+    const porcentajeAhorro = precioMinoristaReferencia && Number(precioMinoristaReferencia) > 0
+      ? ((Number(precioMinoristaReferencia) - precioFinal) / Number(precioMinoristaReferencia)) * 100
+      : null;
 
     // 5. Crear Adjudicacion
     const adjudicacion = await tx.adjudicacion.create({
@@ -165,6 +172,7 @@ export async function adjudicar(datos, usuario) {
         precioFinalUnitario: precioFinal,
         precioMinoristaReferencia: precioMinoristaReferencia ?? null,
         ahorroEstimadoTotal: ahorroEstimado,
+        porcentajeAhorro,
         motivoEleccion
       }
     });
@@ -185,6 +193,15 @@ export async function adjudicar(datos, usuario) {
       const iva = subtotal * alicuotaIva;
       const total = subtotal + iva;
 
+      // Ahorro INDIVIDUAL de este productor: se prorratea el ahorro total de
+      // la adjudicación según su propio volumen (regla D.4). El % de ahorro,
+      // en cambio, es el mismo para todos (es un ratio de precio, no de
+      // volumen) — se repite el valor de la adjudicación para no forzar al
+      // frontend a ir a buscarlo a otra entidad cuando muestra "Mis órdenes".
+      const ahorroEstimadoOrden = ahorroEstimado
+        ? (ahorroEstimado / volumenTotal) * volumenFinal
+        : null;
+
       const orden = await tx.ordenCompra.create({
         data: {
           adjudicacionId: adjudicacion.id,
@@ -194,6 +211,8 @@ export async function adjudicar(datos, usuario) {
           subtotal,
           iva,
           total,
+          ahorroEstimado: ahorroEstimadoOrden,
+          porcentajeAhorro,
           estadoPago: 'PENDIENTE'
         }
       });
@@ -236,7 +255,12 @@ export async function adjudicar(datos, usuario) {
       eventBus.emit('ORDEN_GENERADA', {
         ordenId: orden.id,
         productorId: orden.productorId,
-        campanaId
+        campanaId,
+        // El productor tiene que enterarse EN EL MOMENTO a qué precio se
+        // concretó su compra y cuánto ahorró (regla D.4) — no solo un link.
+        precioFinalUnitario: Number(orden.precioUnitario),
+        total: Number(orden.total),
+        porcentajeAhorro: orden.porcentajeAhorro ? Number(orden.porcentajeAhorro) : null
       });
     }
 
@@ -464,6 +488,9 @@ export function ComparadorPage() {
 - Adjudicar con cotización que no pertenece a la campaña → 400.
 - Verificar atomicidad: forzar un error en medio de la transacción y comprobar rollback completo.
 - Verificar cálculos: IVA, totales, snapshot histórico.
+- Adjudicar con `precioMinoristaReferencia` cargado → `Adjudicacion.porcentajeAhorro` y `ahorroEstimadoTotal` correctos; cada `OrdenCompra` tiene su `ahorroEstimado` prorrateado por volumen y el mismo `porcentajeAhorro` que la adjudicación.
+- Adjudicar sin `precioMinoristaReferencia` → ambos campos de ahorro quedan `null` (no se inventa un valor).
+- Evento `ORDEN_GENERADA` incluye `precioFinalUnitario`, `total` y `porcentajeAhorro` en el payload.
 
 ---
 
