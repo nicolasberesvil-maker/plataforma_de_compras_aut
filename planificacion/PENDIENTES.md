@@ -21,7 +21,7 @@
 
 ## Próximo paso
 
-Arrancar [`09-FASE-4-CAMPANAS.md`](./09-FASE-4-CAMPANAS.md), que ahora incluye también el modelo `Campana` + la tarea de `forgot-password`/`reset-password` (sección 6). Los puntos 2 y 3 de esta tabla siguen pendientes de confirmación de Nicolás mientras se avanza — no bloquean pero conviene cerrarlos antes de llegar a Fase 5.
+Fase 5 completa (2026-07-27, tag `v0.5-fase-5-intenciones-solicitudes`): intenciones/pedidos sueltos unificados, agrupar atómico, notificaciones reales (BD + Socket.io + email), portal productor y bandeja ADMIN. Arrancar [`11-FASE-6-COTIZACIONES.md`](./11-FASE-6-COTIZACIONES.md). El punto 2 de esta tabla (fecha de cierre 48hs) sigue pendiente de confirmación de Nicolás — se implementó como sugerencia editable, no bloquea.
 
 ## Decisión tomada al arrancar Fase 4 (2026-07-27)
 

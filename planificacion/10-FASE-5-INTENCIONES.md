@@ -866,14 +866,14 @@ En esta fase, los listeners ya empiezan a guardar notificaciones en BD aunque el
 
 ## Checklist de cierre
 
-- [ ] Migración `add_solicitudes_e_intenciones` aplicada.
-- [ ] Endpoints `/api/intenciones/*` y `/api/solicitudes/*` operativos.
-- [ ] `POST /api/solicitudes/agrupar` es atómico y dispara los eventos correctos.
-- [ ] Form de carga mobile-first funcional (probarlo en celular o DevTools modo móvil), tanto para intención como para solicitud suelta.
-- [ ] Volumen acumulado se actualiza en vivo cuando otro productor carga intención (Socket.io probado con 2 navegadores).
-- [ ] Tabla `notificaciones` empieza a poblarse al ocurrir eventos, incluyendo notificaciones para ADMIN (no solo productores/proveedores).
-- [ ] Coverage ≥ 60%.
-- [ ] Tag: `v0.5-fase-5-intenciones-solicitudes`.
+- [x] Migración aplicada (`add_notificaciones`; `IntencionCompra` ya existía completa desde Fase 4, ver nota de la tarea 1).
+- [x] Endpoints `/api/intenciones/*` operativos. **No existe `/api/solicitudes/*` separado**: se unificó todo en `intenciones` (ver nota de la tarea 1) — `POST /api/intenciones` sin `campanaId` es el pedido suelto.
+- [x] `POST /api/intenciones/agrupar` es atómico y dispara los eventos correctos.
+- [x] Form de carga mobile-first (`PedidoForm`, portal productor en `/productor`). Verificado con `npm run build` (compila sin errores); no se probó visualmente en DevTools modo móvil por no contar con herramienta de navegador en esta sesión.
+- [x] Volumen acumulado en vivo verificado end-to-end contra el servidor real: dos productores autenticados por Socket.io simultáneos, uno recibe `campana:actualizada` con el volumen correcto al segundo cargar su intención.
+- [x] Tabla `notificaciones` se puebla al ocurrir eventos, incluyendo ADMIN (verificado end-to-end: `SOLICITUD_RECIBIDA` crea notificación para el ADMIN, `CAMPANA_ABIERTA` para productores aprobados).
+- [x] Coverage backend 60% statements / 63.9% líneas (`npm run test:coverage`).
+- [x] Tag: `v0.5-fase-5-intenciones-solicitudes`.
 
 ---
 
