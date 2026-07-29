@@ -19,7 +19,7 @@ const schemaBase = {
   observaciones: z.string().optional(),
   fechaDeseada: z.string().optional(),
   modalidadEntregaPreferida: z.enum(['RETIRO_EN_DEPOSITO', 'ENTREGA_EN_CAMPO']).optional(),
-  depositoPreferidoId: z.coerce.number().int().positive().optional(),
+  // Preferencia de depósito se agrega en Fase 8 (recién ahí existe el modelo Deposito).
   direccionEntregaCampo: z.string().optional(),
   formaPagoPreferida: z.string().optional()
 };
@@ -34,7 +34,7 @@ const schemaSuelto = z.object({
   modalidadEntregaPreferida: z.enum(['RETIRO_EN_DEPOSITO', 'ENTREGA_EN_CAMPO'], { required_error: 'Elegí cómo preferís recibirlo' })
 });
 
-export function PedidoForm({ campana, productoId, pedidoExistente, depositos = [], onGuardado }) {
+export function PedidoForm({ campana, productoId, pedidoExistente, onGuardado }) {
   const queryClient = useQueryClient();
   const esSuelto = !campana;
 
@@ -46,7 +46,6 @@ export function PedidoForm({ campana, productoId, pedidoExistente, depositos = [
           observaciones: pedidoExistente.observaciones || '',
           fechaDeseada: pedidoExistente.fechaDeseada?.slice(0, 10) || '',
           modalidadEntregaPreferida: pedidoExistente.modalidadEntregaPreferida || 'RETIRO_EN_DEPOSITO',
-          depositoPreferidoId: pedidoExistente.depositoPreferidoId || undefined,
           direccionEntregaCampo: pedidoExistente.direccionEntregaCampo || '',
           formaPagoPreferida: pedidoExistente.formaPagoPreferida || ''
         }
@@ -102,21 +101,13 @@ export function PedidoForm({ campana, productoId, pedidoExistente, depositos = [
         {errors.modalidadEntregaPreferida && <p className="text-red-600 text-sm mt-1">{errors.modalidadEntregaPreferida.message}</p>}
       </div>
 
-      {modalidad === 'ENTREGA_EN_CAMPO' ? (
+      {modalidad === 'ENTREGA_EN_CAMPO' && (
         <div>
           <label className="block text-base font-medium mb-2">Dirección de entrega</label>
           <input {...register('direccionEntregaCampo')} type="text"
                  className="w-full px-4 py-3 border-2 rounded-lg text-base"
                  placeholder="Ej: Campo La Esperanza, Ruta 13 km 4" />
           {errors.direccionEntregaCampo && <p className="text-red-600 text-sm mt-1">{errors.direccionEntregaCampo.message}</p>}
-        </div>
-      ) : depositos.length > 0 && (
-        <div>
-          <label className="block text-base font-medium mb-2">¿De qué depósito preferís retirar?</label>
-          <select {...register('depositoPreferidoId')} className="w-full px-4 py-3 border-2 rounded-lg text-base">
-            <option value="">Sin preferencia</option>
-            {depositos.map((d) => <option key={d.id} value={d.id}>{d.nombre} ({d.localidad})</option>)}
-          </select>
         </div>
       )}
 

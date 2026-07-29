@@ -11,7 +11,7 @@ const camposComunes = {
   observaciones: z.string().max(1000).optional(),
   fechaDeseada: z.coerce.date().optional(),
   modalidadEntregaPreferida: z.enum(MODALIDAD_ENTREGA).optional(),
-  depositoPreferidoId: z.number().int().positive().optional(),
+  // depositoPreferidoId se agrega en Fase 8 (recién ahí existe el modelo Deposito).
   direccionEntregaCampo: z.string().min(5).optional(),
   formaPagoPreferida: z.enum(FORMA_PAGO).optional()
 };

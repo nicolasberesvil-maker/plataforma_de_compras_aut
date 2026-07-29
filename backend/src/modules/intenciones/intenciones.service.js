@@ -93,7 +93,6 @@ export async function crear(datos, usuarioId) {
       observaciones: datos.observaciones,
       fechaDeseada: datos.fechaDeseada,
       modalidadEntregaPreferida: datos.modalidadEntregaPreferida,
-      depositoPreferidoId: datos.depositoPreferidoId,
       direccionEntregaCampo: datos.direccionEntregaCampo,
       formaPagoPreferida: datos.formaPagoPreferida
     },
@@ -124,7 +123,6 @@ async function crearSuelta(datos, productor) {
       observaciones: datos.observaciones,
       fechaDeseada: datos.fechaDeseada,
       modalidadEntregaPreferida: datos.modalidadEntregaPreferida,
-      depositoPreferidoId: datos.depositoPreferidoId,
       direccionEntregaCampo: datos.direccionEntregaCampo,
       formaPagoPreferida: datos.formaPagoPreferida
     },
@@ -166,7 +164,6 @@ export async function actualizar(id, datos, usuarioId) {
       observaciones: datos.observaciones,
       fechaDeseada: datos.fechaDeseada,
       modalidadEntregaPreferida: datos.modalidadEntregaPreferida,
-      depositoPreferidoId: datos.depositoPreferidoId,
       direccionEntregaCampo: datos.direccionEntregaCampo,
       formaPagoPreferida: datos.formaPagoPreferida
     },
