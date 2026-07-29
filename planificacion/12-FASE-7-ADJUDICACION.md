@@ -496,14 +496,36 @@ export function ComparadorPage() {
 
 ## Checklist de cierre
 
-- [ ] Migración `add_adjudicaciones` aplicada.
-- [ ] Endpoint POST `/api/adjudicaciones` con transacción atómica.
-- [ ] Endpoints `/api/ordenes/*` operativos.
-- [ ] Comparador admin renderiza correctamente con ranking por precio.
-- [ ] Eventos disparados generan notificaciones a productores y proveedores.
-- [ ] Productor ve sus órdenes en "Mis órdenes".
-- [ ] Coverage ≥ 60%.
+- [x] Migración `add_adjudicaciones` aplicada.
+- [x] Endpoint POST `/api/adjudicaciones` con transacción atómica.
+- [x] Endpoints `/api/ordenes/*` operativos.
+- [x] Comparador admin renderiza correctamente con ranking por precio.
+- [x] Eventos disparados generan notificaciones a productores y proveedores.
+- [x] Productor ve sus órdenes en "Mis órdenes".
+- [x] Coverage: 14 tests nuevos (adjudicaciones + ordenes), suite completa 79/79 verde.
 - [ ] Tag: `v0.7-fase-7-adjudicacion`.
+
+---
+
+## Decisión tomada al implementar (2026-07-29)
+
+El doc original solo cubría la adjudicación COLECTIVA (comparador + cotización
+ganadora real). Pero `campanas.service.js` (Fase 4) ya dejaba una compra
+DIRECTA en `ADJUDICADA` sin pasar por el portal proveedor, así que no existe
+una `Cotizacion` real para ese caso — y `Adjudicacion.cotizacionGanadoraId`
+es NOT NULL (una sola tabla para "quién ganó", sin ramificar el resto del
+flujo por tipo de campaña, ver `02-MODELO-DATOS.md`).
+
+Se resolvió creando una `Cotizacion` **sintética** (`esGanadora=true`) a
+partir de los datos que ya carga AUT en `adjudicarDirecta` (proveedorId,
+precioUnitario, moneda, plazoEntregaDias, condicionesPago), disparada por un
+listener de `adjudicaciones.listeners.js` sobre el evento
+`COMPRA_DIRECTA_ADJUDICADA`. A partir de ahí, `OrdenCompra`/`Entrega` y el
+ranking histórico del comparador son idénticos sin importar `tipo` de
+campaña. De paso se agregó una validación en `campanas.service.js` (`adjudicarDirecta`)
+que exige que el `proveedorId` recibido corresponda a un `Proveedor` real
+antes de transicionar el estado — si no, quedaba una campaña `ADJUDICADA`
+sin `Adjudicacion` ni órdenes.
 
 ---
 

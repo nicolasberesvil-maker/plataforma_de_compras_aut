@@ -23,6 +23,22 @@ async function login(email) {
   return res.body.accessToken;
 }
 
+async function crearProveedor(sufijo) {
+  const email = `proveedor-campanas-${sufijo}-${run}@test.com`;
+  const usuario = await crearUsuario(email, 'PROVEEDOR');
+  const proveedor = await prisma.proveedor.create({
+    data: {
+      usuarioId: usuario.id,
+      razonSocial: `Insumos ${sufijo}`,
+      cuit: `30${run.replace(/\D/g, '').padEnd(8, '1').slice(0, 8)}`,
+      condicionFiscal: 'RESPONSABLE_INSCRIPTO',
+      domicilioFiscal: 'Ruta 9',
+      estadoAprobacion: 'APROBADO'
+    }
+  });
+  return proveedor;
+}
+
 function datosColectiva(overrides = {}) {
   const ahora = new Date();
   return {
@@ -50,10 +66,18 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  const campanas = await prisma.campana.findMany({ where: { productoId }, select: { id: true } });
+  const campanaIds = campanas.map((c) => c.id);
+
+  await prisma.entrega.deleteMany({ where: { ordenCompra: { adjudicacion: { campanaId: { in: campanaIds } } } } });
+  await prisma.ordenCompra.deleteMany({ where: { adjudicacion: { campanaId: { in: campanaIds } } } });
+  await prisma.adjudicacion.deleteMany({ where: { campanaId: { in: campanaIds } } });
+  await prisma.cotizacion.deleteMany({ where: { campanaId: { in: campanaIds } } });
   await prisma.intencionCompra.deleteMany({ where: { productoId } });
   await prisma.campana.deleteMany({ where: { productoId } });
   await prisma.producto.deleteMany({ where: { nombre: { in: nombresProductoCreados } } });
   await prisma.refreshToken.deleteMany({ where: { usuario: { email: { in: emailsCreados } } } });
+  await prisma.proveedor.deleteMany({ where: { usuario: { email: { in: emailsCreados } } } });
   await prisma.productor.deleteMany({ where: { usuario: { email: { in: emailsCreados } } } });
   await prisma.usuario.deleteMany({ where: { email: { in: emailsCreados } } });
   await prisma.$disconnect();
@@ -150,6 +174,7 @@ describe('POST /api/campanas — DIRECTA', () => {
   });
 
   it('adjudicarDirecta pasa de BORRADOR a ADJUDICADA y emite el evento', async () => {
+    const proveedor = await crearProveedor('directa-adj');
     const crear = await request(app)
       .post('/api/campanas')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -159,10 +184,25 @@ describe('POST /api/campanas — DIRECTA', () => {
     const res = await request(app)
       .post(`/api/campanas/${id}/adjudicar-directa`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ proveedorId: 1, precioUnitario: 250.5, plazoEntregaDias: 3, condicionesPago: 'Contado' });
+      .send({ proveedorId: proveedor.id, precioUnitario: 250.5, plazoEntregaDias: 3, condicionesPago: 'Contado' });
 
     expect(res.status).toBe(200);
     expect(res.body.campana.estado).toBe('ADJUDICADA');
+  });
+
+  it('adjudicarDirecta con proveedorId inexistente → 404', async () => {
+    const crear = await request(app)
+      .post('/api/campanas')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ productoId, tipo: 'DIRECTA', nombre: `Directa Sin Proveedor ${run}`, fechaApertura: new Date().toISOString() });
+    const id = crear.body.campana.id;
+
+    const res = await request(app)
+      .post(`/api/campanas/${id}/adjudicar-directa`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ proveedorId: 999999, precioUnitario: 250.5, plazoEntregaDias: 3, condicionesPago: 'Contado' });
+
+    expect(res.status).toBe(404);
   });
 
   it('cerrarIntenciones sobre una DIRECTA es 409 (no licita)', async () => {

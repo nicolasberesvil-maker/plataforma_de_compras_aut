@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { campanasApi } from '../api/campanas.api';
 import { transicionesDisponibles } from '../utils/transicionesCampana';
@@ -50,6 +51,11 @@ export function AccionesCampana({ campana }) {
           <button onClick={() => setFormActivo('adjudicar')} disabled={pending} className="bg-sky-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50">
             Adjudicar
           </button>
+        )}
+        {puede('ADJUDICADA') && campana.tipo === 'COLECTIVA' && (
+          <Link to={`/admin/campanas/${campana.id}/comparador`} className="bg-sky-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">
+            Comparar y adjudicar
+          </Link>
         )}
         {campana.tipo === 'CONTINUA' && campana.estado === 'ABIERTA' && (
           <button onClick={() => setFormActivo('tanda')} disabled={pending} className="bg-sky-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50">

@@ -21,6 +21,9 @@ export function registrarListenersNotificaciones() {
   eventBus.on('COMPRA_DIRECTA_ADJUDICADA', onCompraDirectaAdjudicada);
   eventBus.on('TANDA_GENERADA', onTandaGenerada);
   eventBus.on('RFQ_ABIERTO', onRfqAbierto);
+  eventBus.on('CAMPANA_ADJUDICADA', onCampanaAdjudicada);
+  eventBus.on('ORDEN_GENERADA', onOrdenGenerada);
+  eventBus.on('COTIZACION_RECHAZADA', onCotizacionRechazada);
 
   logger.info('Listeners de notificaciones registrados');
 }
@@ -217,6 +220,65 @@ function onCompraDirectaAdjudicada({ campanaId, proveedorId }) {
 
 function onTandaGenerada({ padreId, hijaId, tipoTanda }) {
   logger.info({ padreId, hijaId, tipoTanda }, 'TODO: notificación TANDA_GENERADA sin definir');
+}
+
+/** AUT adjudicó la campaña: avisa a todo el equipo (ORDEN_GENERADA ya avisa a cada productor). */
+async function onCampanaAdjudicada({ campanaId }) {
+  try {
+    const campana = await prisma.campana.findUnique({ where: { id: campanaId }, include: { producto: true } });
+    const staffAut = await prisma.usuario.findMany({ where: { rol: { in: ['ADMIN', 'OPERADOR'] }, activo: true } });
+
+    for (const usuario of staffAut) {
+      await notificacionesService.crearYEnviar({
+        usuarioId: usuario.id,
+        tipo: 'CAMPANA_ADJUDICADA',
+        titulo: 'Campaña adjudicada',
+        mensaje: `"${campana.nombre}" (${campana.producto.nombre}) fue adjudicada.`,
+        enlaceRelativo: `/admin/campanas/${campanaId}`,
+        metadatos: { campanaId }
+      });
+    }
+  } catch (err) {
+    logger.error({ err, campanaId }, 'Error notificando CAMPANA_ADJUDICADA');
+  }
+}
+
+/**
+ * El productor tiene que enterarse EN EL MOMENTO de que su compra se
+ * concretó, a qué precio y cuánto ahorró vs. comprar individual (regla D.4).
+ */
+async function onOrdenGenerada({ ordenId, productorId, porcentajeAhorro, precioFinalUnitario, total }) {
+  try {
+    const productor = await productorService.obtenerPorId(productorId);
+    const fraseAhorro = porcentajeAhorro ? ` Ahorraste un ${Number(porcentajeAhorro).toFixed(1)}% comprando en grupo.` : '';
+
+    await notificacionesService.crearYEnviar({
+      usuarioId: productor.usuarioId,
+      tipo: 'ORDEN_GENERADA',
+      titulo: 'Tu compra se concretó',
+      mensaje: `Se confirmó tu compra a $${Number(precioFinalUnitario).toFixed(2)} por unidad (total $${Number(total).toFixed(2)}).${fraseAhorro}`,
+      enlaceRelativo: `/productor/mis-ordenes/${ordenId}`,
+      metadatos: { ordenId, precioFinalUnitario, total, porcentajeAhorro }
+    });
+  } catch (err) {
+    logger.error({ err, ordenId }, 'Error notificando ORDEN_GENERADA');
+  }
+}
+
+async function onCotizacionRechazada({ cotizacionId, proveedorId }) {
+  try {
+    const proveedor = await proveedorService.obtenerPorId(proveedorId);
+    await notificacionesService.crearYEnviar({
+      usuarioId: proveedor.usuarioId,
+      tipo: 'COTIZACION_RECHAZADA',
+      titulo: 'Tu cotización no fue elegida',
+      mensaje: 'La campaña que cotizaste ya fue adjudicada a otro proveedor. Gracias por participar.',
+      enlaceRelativo: '/proveedor/mis-cotizaciones',
+      metadatos: { cotizacionId }
+    });
+  } catch (err) {
+    logger.error({ err, cotizacionId }, 'Error notificando COTIZACION_RECHAZADA');
+  }
 }
 
 /** Se abrió la licitación: avisa a TODOS los proveedores aprobados (todavía no hay cotizaciones). */

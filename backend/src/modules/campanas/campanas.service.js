@@ -192,6 +192,12 @@ export async function adjudicarDirecta(id, datos, usuario) {
     throw new ConflictError(`No se puede pasar de ${campana.estado} a ADJUDICADA (tipo DIRECTA)`);
   }
 
+  // El módulo de adjudicaciones (Fase 7) persiste este proveedorId como FK real
+  // al materializar la Cotizacion/OrdenCompra; si no existe, se valida acá antes
+  // de transicionar el estado para no dejar la campaña ADJUDICADA sin órdenes.
+  const proveedor = await prisma.proveedor.findUnique({ where: { id: datos.proveedorId } });
+  if (!proveedor) throw new NotFoundError('Proveedor');
+
   const actualizada = await prisma.campana.update({
     where: { id },
     data: { estado: 'ADJUDICADA' }
@@ -201,6 +207,9 @@ export async function adjudicarDirecta(id, datos, usuario) {
     campanaId: id,
     proveedorId: datos.proveedorId,
     precioUnitario: datos.precioUnitario,
+    moneda: datos.moneda,
+    plazoEntregaDias: datos.plazoEntregaDias,
+    condicionesPago: datos.condicionesPago,
     adjudicadaPorId: usuario.id
   });
 

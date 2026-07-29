@@ -72,6 +72,8 @@ model Productor {
   createdAt DateTime @default(now()) @map("created_at")
 
   intenciones IntencionCompra[]
+  ordenes     OrdenCompra[]
+  entregas    Entrega[]
 
   @@map("productores")
 }
@@ -247,6 +249,7 @@ model Campana {
 
   intenciones  IntencionCompra[]
   cotizaciones Cotizacion[]
+  adjudicacion Adjudicacion?
 
   @@index([estado])
   @@index([fechaCierre])
@@ -350,11 +353,11 @@ model Notificacion {
   usuarioId Int     @map("usuario_id")
   usuario   Usuario @relation(fields: [usuarioId], references: [id])
 
-  tipo            String  @db.VarChar(50)
-  titulo          String
-  mensaje         String  @db.Text
-  enlaceRelativo  String? @map("enlace_relativo")
-  metadatos       Json?
+  tipo           String  @db.VarChar(50)
+  titulo         String
+  mensaje        String  @db.Text
+  enlaceRelativo String? @map("enlace_relativo")
+  metadatos      Json?
 
   leida   Boolean   @default(false)
   leidaAt DateTime? @map("leida_at")
@@ -391,12 +394,20 @@ model Cotizacion {
   // % mensual para pago financiado. Nullable: hay proveedores que solo venden de contado.
   tasaInteresMensual Decimal? @map("tasa_interes_mensual") @db.Decimal(5, 2)
 
-  condicionesPago String  @map("condiciones_pago") @db.Text
-  observaciones   String? @db.Text
+  condicionesPago String   @map("condiciones_pago") @db.Text
+  observaciones   String?  @db.Text
   validaHasta     DateTime @map("valida_hasta")
+
+  // Marcada por adjudicaciones.service.js al adjudicar la campaña (Fase 7).
+  // Para DIRECTA (sin portal proveedor), la fila se crea sintéticamente con
+  // esGanadora=true a partir de los datos de adjudicarDirecta — así el resto
+  // del flujo (Adjudicacion, ranking histórico) no necesita distinguir tipo.
+  esGanadora Boolean @default(false) @map("es_ganadora")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  adjudicacionGanadora Adjudicacion?
 
   // Un proveedor solo puede tener UNA cotización por campaña (edita, no duplica).
   @@unique([campanaId, proveedorId])
@@ -406,4 +417,111 @@ model Cotizacion {
 enum Moneda {
   ARS
   USD
+}
+
+// ============================================================
+// ADJUDICACIÓN Y ÓRDENES DE COMPRA (Fase 7)
+// ============================================================
+
+// Acto formal por el cual AUT cierra la campaña y elige al ganador.
+// Una sola adjudicación por campaña (regla C.3): campanaId es único.
+model Adjudicacion {
+  id        Int     @id @default(autoincrement())
+  campanaId Int     @unique @map("campana_id")
+  campana   Campana @relation(fields: [campanaId], references: [id])
+
+  cotizacionGanadoraId Int        @unique @map("cotizacion_ganadora_id")
+  cotizacionGanadora   Cotizacion @relation(fields: [cotizacionGanadoraId], references: [id])
+
+  // Snapshot histórico: estos valores no se recalculan, quedan fijos al momento de adjudicar.
+  volumenTotalAdjudicado Decimal @map("volumen_total_adjudicado") @db.Decimal(12, 2)
+  precioFinalUnitario    Decimal @map("precio_final_unitario") @db.Decimal(12, 4)
+
+  precioMinoristaReferencia Decimal? @map("precio_minorista_referencia") @db.Decimal(12, 4)
+  ahorroEstimadoTotal       Decimal? @map("ahorro_estimado_total") @db.Decimal(12, 2)
+  // % de ahorro agregado (regla D.4). Null si no se cargó precioMinoristaReferencia.
+  porcentajeAhorro          Decimal? @map("porcentaje_ahorro") @db.Decimal(5, 2)
+
+  motivoEleccion String? @db.Text
+
+  adjudicadaAt DateTime @default(now()) @map("adjudicada_at")
+
+  ordenes OrdenCompra[]
+
+  @@map("adjudicaciones")
+}
+
+// Compromiso firme de compra de un productor, derivado de la adjudicación.
+// Una orden por cada IntencionCompra válida al momento del cierre.
+model OrdenCompra {
+  id             Int          @id @default(autoincrement())
+  adjudicacionId Int          @map("adjudicacion_id")
+  adjudicacion   Adjudicacion @relation(fields: [adjudicacionId], references: [id])
+  productorId    Int          @map("productor_id")
+  productor      Productor    @relation(fields: [productorId], references: [id])
+
+  // Snapshot histórico: precio, IVA y total no se recalculan dinámicamente.
+  volumenFinal   Decimal @map("volumen_final") @db.Decimal(12, 2)
+  precioUnitario Decimal @map("precio_unitario") @db.Decimal(12, 4)
+  subtotal       Decimal @db.Decimal(14, 2)
+  iva            Decimal @db.Decimal(14, 2)
+  total          Decimal @db.Decimal(14, 2)
+
+  // Ahorro individual de este productor (regla D.4), prorrateado desde
+  // Adjudicacion.ahorroEstimadoTotal según su volumenFinal.
+  ahorroEstimado   Decimal? @map("ahorro_estimado") @db.Decimal(14, 2)
+  porcentajeAhorro Decimal? @map("porcentaje_ahorro") @db.Decimal(5, 2)
+
+  estadoPago EstadoPago @default(PENDIENTE) @map("estado_pago")
+  formaPago  FormaPago? @map("forma_pago")
+  cuotas     Int        @default(1)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  entrega Entrega?
+
+  @@map("ordenes_compra")
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PARCIAL
+  PAGADO
+  VENCIDO
+  CANCELADO
+}
+
+// Entrega física asociada a una orden de compra. Se crea PENDIENTE al
+// adjudicar; el módulo de logística (Fase 9) maneja el resto de las
+// transiciones de estado.
+model Entrega {
+  id            Int         @id @default(autoincrement())
+  ordenCompraId Int         @unique @map("orden_compra_id")
+  ordenCompra   OrdenCompra @relation(fields: [ordenCompraId], references: [id])
+  productorId   Int         @map("productor_id")
+  productor     Productor   @relation(fields: [productorId], references: [id])
+
+  modalidad ModalidadEntrega
+  estado    EstadoEntrega    @default(PENDIENTE)
+
+  // FK a Deposito se agrega en la migración de Fase 8, cuando ese modelo exista.
+  depositoId     Int?    @map("deposito_id")
+  direccionCampo String? @map("direccion_campo")
+
+  fechaEstimada DateTime? @map("fecha_estimada")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([estado])
+  @@map("entregas")
+}
+
+enum EstadoEntrega {
+  PENDIENTE
+  EN_TRANSITO
+  DISPONIBLE_PARA_RETIRO
+  EN_RUTA_A_CAMPO
+  ENTREGADA
+  CANCELADA
 }

@@ -3,12 +3,14 @@ import app from './app.js';
 import { env } from './config/env.js';
 import { logger } from './utils/logger.js';
 import { registrarListenersNotificaciones } from './modules/notificaciones/notificaciones.listeners.js';
+import { registrarListenersAdjudicaciones } from './modules/adjudicaciones/adjudicaciones.listeners.js';
 import { iniciarJobs } from './jobs/index.js';
 import { socketService } from './services/socket.service.js';
 
 const httpServer = http.createServer(app);
 
 registrarListenersNotificaciones();
+registrarListenersAdjudicaciones();
 
 socketService.iniciar(httpServer);
 iniciarJobs();

@@ -21,6 +21,8 @@ import { BandejaPedidosPage } from './features/intenciones/pages/BandejaPedidosP
 import { CampanasParaCotizarPage } from './features/cotizaciones/pages/CampanasParaCotizarPage';
 import { CotizacionFormPage } from './features/cotizaciones/pages/CotizacionFormPage';
 import { MisCotizacionesPage } from './features/cotizaciones/pages/MisCotizacionesPage';
+import { ComparadorPage } from './features/adjudicaciones/pages/ComparadorPage';
+import { MisOrdenesPage } from './features/ordenes/pages/MisOrdenesPage';
 import { PanelAdminLayout } from './layouts/PanelAdminLayout';
 import { PanelProductorLayout } from './layouts/PanelProductorLayout';
 import { PanelProveedorLayout } from './layouts/PanelProveedorLayout';
@@ -71,6 +73,7 @@ export default function App() {
             <Route path="campanas/nueva" element={<CampanaFormPage />} />
             <Route path="campanas/:id" element={<CampanaDetailPage />} />
             <Route path="campanas/:id/editar" element={<CampanaFormPage />} />
+            <Route path="campanas/:id/comparador" element={<ComparadorPage />} />
             <Route path="solicitudes" element={<BandejaPedidosPage />} />
           </Route>
 
@@ -81,6 +84,7 @@ export default function App() {
             <Route index element={<CampanasAbiertasPage />} />
             <Route path="pedir" element={<PedirProductoPage />} />
             <Route path="mis-pedidos" element={<MisPedidosPage />} />
+            <Route path="mis-ordenes" element={<MisOrdenesPage />} />
             <Route path="campanas/:id" element={<CampanaProductorDetailPage />} />
           </Route>
 
