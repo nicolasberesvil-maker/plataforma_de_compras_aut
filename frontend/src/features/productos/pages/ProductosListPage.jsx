@@ -31,6 +31,12 @@ export function ProductosListPage() {
         </Link>
       </div>
 
+      {desactivar.isError && (
+        <p className="text-red-600 text-sm">
+          {desactivar.error.response?.data?.error?.message || 'Error al desactivar el producto'}
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-3">
         <select
           value={categoria}

@@ -1,5 +1,5 @@
 import { prisma } from '../../config/database.js';
-import { NotFoundError } from '../../utils/errors.js';
+import { NotFoundError, ConflictError } from '../../utils/errors.js';
 
 export async function listar({ categoria, activo, search, page = 1, limit = 20 }) {
   const where = {};
@@ -41,10 +41,14 @@ export async function actualizar(id, datos) {
 }
 
 export async function desactivar(id) {
-  // TODO(nicolas, fase-4): validar que no haya campañas ABIERTA/EN_LICITACION
-  // con este producto antes de desactivar (regla documentada en 08-FASE-3-PRODUCTOS.md).
-  // El modelo Campana todavía no existe (se crea en Fase 4), así que por ahora
-  // es un soft-delete sin esa validación.
   await obtenerPorId(id);
+
+  const campanaActiva = await prisma.campana.findFirst({
+    where: { productoId: id, estado: { in: ['ABIERTA', 'EN_LICITACION'] } }
+  });
+  if (campanaActiva) {
+    throw new ConflictError('No se puede desactivar: el producto tiene campañas ABIERTA o EN_LICITACION');
+  }
+
   return prisma.producto.update({ where: { id }, data: { activo: false } });
 }

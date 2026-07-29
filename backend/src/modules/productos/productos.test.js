@@ -35,6 +35,7 @@ async function login(email) {
 }
 
 afterAll(async () => {
+  await prisma.campana.deleteMany({ where: { producto: { nombre: { in: nombresCreados } } } });
   await prisma.producto.deleteMany({ where: { nombre: { in: nombresCreados } } });
   await prisma.refreshToken.deleteMany({ where: { usuario: { email: { in: emailsCreados } } } });
   await prisma.usuario.deleteMany({ where: { email: { in: emailsCreados } } });
@@ -107,5 +108,36 @@ describe('DELETE /api/productos/:id', () => {
 
     const actualizado = await prisma.producto.findUnique({ where: { id: producto.id } });
     expect(actualizado.activo).toBe(false);
+  });
+
+  it('rechaza desactivar si el producto tiene una campaña ABIERTA (409)', async () => {
+    const email = `admin-desact-bloq-${run}@test.com`;
+    await crearUsuario(email, 'ADMIN');
+    const token = await login(email);
+    const producto = await crearProducto(`Producto Con Campana ${run}`);
+    const admin = await prisma.usuario.findFirstOrThrow({ where: { email } });
+
+    const ahora = new Date();
+    await prisma.campana.create({
+      data: {
+        producto: { connect: { id: producto.id } },
+        creadaPor: { connect: { id: admin.id } },
+        tipo: 'COLECTIVA',
+        nombre: `Campaña Bloqueo ${run}`,
+        estado: 'ABIERTA',
+        volumenMinimo: 1000,
+        fechaApertura: ahora,
+        fechaCierre: new Date(ahora.getTime() + 5 * 24 * 60 * 60 * 1000)
+      }
+    });
+
+    const res = await request(app)
+      .delete(`/api/productos/${producto.id}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(409);
+
+    const actualizado = await prisma.producto.findUnique({ where: { id: producto.id } });
+    expect(actualizado.activo).toBe(true);
   });
 });
