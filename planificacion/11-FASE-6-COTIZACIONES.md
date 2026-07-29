@@ -385,7 +385,7 @@ export function CotizacionForm({ campana, cotizacionExistente, onSuccess }) {
 - [x] Portal proveedor visible y funcional.
 - [x] Notificación `RFQ_RECIBIDO` llega a proveedores al cerrarse intenciones.
 - [x] Coverage ≥ 60%.
-- [ ] Tag: `v0.6-fase-6-cotizaciones`.
+- [x] Tag: `v0.6-fase-6-cotizaciones`.
 
 ---
 
