@@ -380,11 +380,11 @@ export function CotizacionForm({ campana, cotizacionExistente, onSuccess }) {
 
 ## Checklist de cierre
 
-- [ ] Migración `add_cotizaciones` aplicada.
-- [ ] Endpoints `/api/cotizaciones/*` operativos.
-- [ ] Portal proveedor visible y funcional.
-- [ ] Notificación `RFQ_RECIBIDO` llega a proveedores al cerrarse intenciones.
-- [ ] Coverage ≥ 60%.
+- [x] Migración `add_cotizaciones` aplicada.
+- [x] Endpoints `/api/cotizaciones/*` operativos.
+- [x] Portal proveedor visible y funcional.
+- [x] Notificación `RFQ_RECIBIDO` llega a proveedores al cerrarse intenciones.
+- [x] Coverage ≥ 60%.
 - [ ] Tag: `v0.6-fase-6-cotizaciones`.
 
 ---

@@ -11,6 +11,7 @@ import proveedoresRoutes from './modules/proveedores/proveedores.routes.js';
 import productosRoutes from './modules/productos/productos.routes.js';
 import campanasRoutes from './modules/campanas/campanas.routes.js';
 import intencionesRoutes from './modules/intenciones/intenciones.routes.js';
+import cotizacionesRoutes from './modules/cotizaciones/cotizaciones.routes.js';
 import notificacionesRoutes from './modules/notificaciones/notificaciones.routes.js';
 
 const app = express();
@@ -36,6 +37,7 @@ app.use('/api/proveedores', proveedoresRoutes);
 app.use('/api/productos', productosRoutes);
 app.use('/api/campanas', campanasRoutes);
 app.use('/api/intenciones', intencionesRoutes);
+app.use('/api/cotizaciones', cotizacionesRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
 
 // TODO: aquí van los routers del resto de módulos (los va a sumar cada fase)

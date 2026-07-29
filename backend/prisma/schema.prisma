@@ -99,6 +99,8 @@ model Proveedor {
 
   createdAt DateTime @default(now()) @map("created_at")
 
+  cotizaciones Cotizacion[]
+
   @@map("proveedores")
 }
 
@@ -243,7 +245,8 @@ model Campana {
   canceladaAt       DateTime? @map("cancelada_at")
   motivoCancelacion String?   @map("motivo_cancelacion") @db.Text
 
-  intenciones IntencionCompra[]
+  intenciones  IntencionCompra[]
+  cotizaciones Cotizacion[]
 
   @@index([estado])
   @@index([fechaCierre])
@@ -360,4 +363,47 @@ model Notificacion {
 
   @@index([usuarioId, leida])
   @@map("notificaciones")
+}
+
+// ============================================================
+// COTIZACIONES (Fase 6 — portal proveedor)
+// ============================================================
+
+// Cotización de un proveedor para una Campana en EN_LICITACION. Sobre
+// cerrado (regla C.6): un proveedor nunca ve la cotización de otro, y el
+// service tampoco expone las intenciones individuales al listar campañas
+// cotizables, solo el volumen consolidado.
+model Cotizacion {
+  id Int @id @default(autoincrement())
+
+  campanaId Int     @map("campana_id")
+  campana   Campana @relation(fields: [campanaId], references: [id])
+
+  proveedorId Int       @map("proveedor_id")
+  proveedor   Proveedor @relation(fields: [proveedorId], references: [id])
+
+  // Precio de contado (regla D.3): base para calcular cualquier financiación.
+  precioUnitario Decimal @map("precio_unitario") @db.Decimal(12, 4)
+  monedaPrecio   Moneda  @default(ARS) @map("moneda_precio")
+
+  plazoEntregaDias Int @map("plazo_entrega_dias")
+
+  // % mensual para pago financiado. Nullable: hay proveedores que solo venden de contado.
+  tasaInteresMensual Decimal? @map("tasa_interes_mensual") @db.Decimal(5, 2)
+
+  condicionesPago String  @map("condiciones_pago") @db.Text
+  observaciones   String? @db.Text
+  validaHasta     DateTime @map("valida_hasta")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Un proveedor solo puede tener UNA cotización por campaña (edita, no duplica).
+  @@unique([campanaId, proveedorId])
+  @@map("cotizaciones")
+}
+
+enum Moneda {
+  ARS
+  USD
 }

@@ -20,6 +20,7 @@ export function registrarListenersNotificaciones() {
   eventBus.on('CAMPANA_CANCELADA', onCampanaCancelada);
   eventBus.on('COMPRA_DIRECTA_ADJUDICADA', onCompraDirectaAdjudicada);
   eventBus.on('TANDA_GENERADA', onTandaGenerada);
+  eventBus.on('RFQ_ABIERTO', onRfqAbierto);
 
   logger.info('Listeners de notificaciones registrados');
 }
@@ -216,4 +217,25 @@ function onCompraDirectaAdjudicada({ campanaId, proveedorId }) {
 
 function onTandaGenerada({ padreId, hijaId, tipoTanda }) {
   logger.info({ padreId, hijaId, tipoTanda }, 'TODO: notificación TANDA_GENERADA sin definir');
+}
+
+/** Se abrió la licitación: avisa a TODOS los proveedores aprobados (todavía no hay cotizaciones). */
+async function onRfqAbierto({ campanaId, volumenConsolidado }) {
+  try {
+    const campana = await prisma.campana.findUnique({ where: { id: campanaId }, include: { producto: true } });
+    const proveedores = await proveedorService.listarAprobados();
+
+    for (const proveedor of proveedores) {
+      await notificacionesService.crearYEnviar({
+        usuarioId: proveedor.usuarioId,
+        tipo: 'RFQ_RECIBIDO',
+        titulo: 'Nueva licitación disponible',
+        mensaje: `Hay una nueva campaña para cotizar: ${campana.producto.nombre}. Volumen: ${volumenConsolidado} ${campana.producto.unidadMedida}.`,
+        enlaceRelativo: `/proveedor/campanas/${campanaId}`,
+        metadatos: { campanaId, volumenConsolidado }
+      });
+    }
+  } catch (err) {
+    logger.error({ err, campanaId }, 'Error notificando RFQ_ABIERTO');
+  }
 }

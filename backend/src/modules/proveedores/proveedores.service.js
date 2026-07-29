@@ -30,6 +30,14 @@ export async function listar({ estadoAprobacion, search, page = 1, limit = 20 })
   return { data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 }
 
+// Usado por el módulo de notificaciones (avisos masivos al abrirse una licitación).
+export async function listarAprobados() {
+  return prisma.proveedor.findMany({
+    where: { estadoAprobacion: 'APROBADO', usuario: { activo: true } },
+    include: { usuario: true }
+  });
+}
+
 export async function obtenerPorId(id, usuarioSolicitante) {
   const proveedor = await prisma.proveedor.findUnique({
     where: { id },

@@ -18,8 +18,12 @@ import { PedirProductoPage } from './features/intenciones/pages/PedirProductoPag
 import { MisPedidosPage } from './features/intenciones/pages/MisPedidosPage';
 import { CampanaProductorDetailPage } from './features/intenciones/pages/CampanaProductorDetailPage';
 import { BandejaPedidosPage } from './features/intenciones/pages/BandejaPedidosPage';
+import { CampanasParaCotizarPage } from './features/cotizaciones/pages/CampanasParaCotizarPage';
+import { CotizacionFormPage } from './features/cotizaciones/pages/CotizacionFormPage';
+import { MisCotizacionesPage } from './features/cotizaciones/pages/MisCotizacionesPage';
 import { PanelAdminLayout } from './layouts/PanelAdminLayout';
 import { PanelProductorLayout } from './layouts/PanelProductorLayout';
+import { PanelProveedorLayout } from './layouts/PanelProveedorLayout';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 
 const queryClient = new QueryClient({
@@ -78,6 +82,15 @@ export default function App() {
             <Route path="pedir" element={<PedirProductoPage />} />
             <Route path="mis-pedidos" element={<MisPedidosPage />} />
             <Route path="campanas/:id" element={<CampanaProductorDetailPage />} />
+          </Route>
+
+          <Route
+            path="/proveedor"
+            element={<ProtectedRoute roles={['PROVEEDOR']}><PanelProveedorLayout /></ProtectedRoute>}
+          >
+            <Route index element={<CampanasParaCotizarPage />} />
+            <Route path="campanas/:id/cotizar" element={<CotizacionFormPage />} />
+            <Route path="mis-cotizaciones" element={<MisCotizacionesPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
