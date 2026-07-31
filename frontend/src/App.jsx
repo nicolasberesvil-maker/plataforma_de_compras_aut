@@ -30,9 +30,15 @@ import { MovimientosStockPage } from './features/depositos/pages/MovimientosStoc
 import { EntregasAdminPage } from './features/entregas/pages/EntregasAdminPage';
 import { EntregaDetailPage } from './features/entregas/pages/EntregaDetailPage';
 import { MisEntregasPage } from './features/entregas/pages/MisEntregasPage';
+import { FacturasAdminPage } from './features/facturas/pages/FacturasAdminPage';
+import { FacturaDetailPage } from './features/facturas/pages/FacturaDetailPage';
+import { MisFacturasPage } from './features/facturas/pages/MisFacturasPage';
+import { DashboardAdminPage } from './features/dashboard/pages/DashboardAdminPage';
+import { DashboardProductorPage } from './features/dashboard/pages/DashboardProductorPage';
 import { PanelAdminLayout } from './layouts/PanelAdminLayout';
 import { PanelProductorLayout } from './layouts/PanelProductorLayout';
 import { PanelProveedorLayout } from './layouts/PanelProveedorLayout';
+import { PanelDepositoLayout } from './layouts/PanelDepositoLayout';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 
 const queryClient = new QueryClient({
@@ -67,9 +73,10 @@ export default function App() {
 
           <Route
             path="/admin"
-            element={<ProtectedRoute roles={['ADMIN']}><PanelAdminLayout /></ProtectedRoute>}
+            element={<ProtectedRoute roles={['ADMIN', 'CONTADOR']}><PanelAdminLayout /></ProtectedRoute>}
           >
-            <Route index element={<Navigate to="usuarios" replace />} />
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardAdminPage />} />
             <Route path="usuarios" element={<UsuariosListPage />} />
             <Route path="productores-pendientes" element={<ProductoresPendientesPage />} />
             <Route path="proveedores" element={<ProveedoresPage />} />
@@ -89,6 +96,8 @@ export default function App() {
             <Route path="movimientos-stock" element={<MovimientosStockPage />} />
             <Route path="entregas" element={<EntregasAdminPage />} />
             <Route path="entregas/:id" element={<EntregaDetailPage />} />
+            <Route path="facturas" element={<FacturasAdminPage />} />
+            <Route path="facturas/:id" element={<FacturaDetailPage />} />
           </Route>
 
           <Route
@@ -96,12 +105,23 @@ export default function App() {
             element={<ProtectedRoute roles={['PRODUCTOR']}><PanelProductorLayout /></ProtectedRoute>}
           >
             <Route index element={<CampanasAbiertasPage />} />
+            <Route path="resumen" element={<DashboardProductorPage />} />
             <Route path="pedir" element={<PedirProductoPage />} />
             <Route path="mis-pedidos" element={<MisPedidosPage />} />
             <Route path="mis-ordenes" element={<MisOrdenesPage />} />
             <Route path="mis-entregas" element={<MisEntregasPage />} />
             <Route path="entregas/:id" element={<EntregaDetailPage />} />
+            <Route path="mis-facturas" element={<MisFacturasPage />} />
+            <Route path="facturas/:id" element={<FacturaDetailPage />} />
             <Route path="campanas/:id" element={<CampanaProductorDetailPage />} />
+          </Route>
+
+          <Route
+            path="/deposito"
+            element={<ProtectedRoute roles={['OPERADOR_DEPOSITO']}><PanelDepositoLayout /></ProtectedRoute>}
+          >
+            <Route index element={<EntregasAdminPage />} />
+            <Route path="entregas/:id" element={<EntregaDetailPage />} />
           </Route>
 
           <Route

@@ -8,11 +8,11 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get('/', requireRole(['ADMIN', 'OPERADOR']), validate(filtrosAdjudicacionSchema, 'query'), ctrl.listar);
-router.get('/comparador/:campanaId', requireRole(['ADMIN']), ctrl.obtenerComparador);
-router.get('/campana/:campanaId', requireRole(['ADMIN', 'OPERADOR']), ctrl.obtenerPorCampana);
-router.get('/:id', requireRole(['ADMIN', 'OPERADOR']), ctrl.obtenerPorId);
+router.get('/', requireRole(['ADMIN', 'OPERADOR', 'CONTADOR']), validate(filtrosAdjudicacionSchema, 'query'), ctrl.listar);
+router.get('/comparador/:campanaId', requireRole(['ADMIN', 'CONTADOR']), ctrl.obtenerComparador);
+router.get('/campana/:campanaId', requireRole(['ADMIN', 'OPERADOR', 'CONTADOR']), ctrl.obtenerPorCampana);
+router.get('/:id', requireRole(['ADMIN', 'OPERADOR', 'CONTADOR']), ctrl.obtenerPorId);
 
-router.post('/', requireRole(['ADMIN']), validate(adjudicarSchema), ctrl.adjudicar);
+router.post('/', requireRole(['ADMIN', 'CONTADOR']), validate(adjudicarSchema), ctrl.adjudicar);
 
 export default router;

@@ -27,6 +27,7 @@ export function registrarListenersNotificaciones() {
   eventBus.on('ENTREGA_EN_TRANSITO', onEntregaEnTransito);
   eventBus.on('ENTREGA_DISPONIBLE', onEntregaDisponible);
   eventBus.on('ENTREGA_CONFIRMADA', onEntregaConfirmada);
+  eventBus.on('FACTURA_EMITIDA', onFacturaEmitida);
 
   logger.info('Listeners de notificaciones registrados');
 }
@@ -334,6 +335,22 @@ async function onEntregaConfirmada({ entregaId, productorId }) {
     });
   } catch (err) {
     logger.error({ err, entregaId }, 'Error notificando ENTREGA_CONFIRMADA');
+  }
+}
+
+async function onFacturaEmitida({ facturaId, ordenId, productorId, total }) {
+  try {
+    const productor = await productorService.obtenerPorId(productorId);
+    await notificacionesService.crearYEnviar({
+      usuarioId: productor.usuarioId,
+      tipo: 'FACTURA_EMITIDA',
+      titulo: 'Se emitió tu factura',
+      mensaje: `Ya está disponible tu factura por $${Number(total).toFixed(2)}. Podés descargarla desde tu portal.`,
+      enlaceRelativo: '/productor/mis-facturas',
+      metadatos: { facturaId, ordenId }
+    });
+  } catch (err) {
+    logger.error({ err, facturaId }, 'Error notificando FACTURA_EMITIDA');
   }
 }
 

@@ -17,7 +17,9 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().optional(),
-  SMTP_SECURE: z.coerce.boolean().default(false)
+  SMTP_SECURE: z.coerce.boolean().default(false),
+
+  PDF_STORAGE_DIR: z.string().default('./storage/facturas')
 });
 
 const parsed = envSchema.safeParse(process.env);

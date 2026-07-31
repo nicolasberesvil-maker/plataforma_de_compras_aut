@@ -5,6 +5,7 @@ import { entregasApi } from '../api/entregas.api';
 import { depositosApi } from '../../depositos/api/depositos.api';
 import { EstadoEntregaBadge } from './EstadoEntregaBadge';
 import { ConfirmarRetiroForm } from './ConfirmarRetiroForm';
+import { useAuthStore } from '../../../store/authStore';
 
 function mensajeError(err, fallback) {
   return err?.response?.data?.error?.message || fallback;
@@ -14,6 +15,12 @@ export function EntregaRow({ entrega }) {
   const [formularioAbierto, setFormularioAbierto] = useState(null); // 'retiro' | 'campo' | null
   const [depositoElegido, setDepositoElegido] = useState('');
   const queryClient = useQueryClient();
+  const rol = useAuthStore((s) => s.usuario?.rol);
+  // El operador de depósito solo tiene permiso de backend para marcar
+  // disponible y confirmar retiro (ver entregas.routes.js). Despachar
+  // (en-transito), confirmar entrega en campo y cancelar son de ADMIN.
+  const esOperadorDeposito = rol === 'OPERADOR_DEPOSITO';
+  const basePath = esOperadorDeposito ? '/deposito' : '/admin';
 
   const producto = entrega.ordenCompra?.adjudicacion?.campana?.producto;
   const nombreProductor = entrega.productor?.usuario
@@ -65,7 +72,7 @@ export function EntregaRow({ entrega }) {
     <>
       <tr className="border-b align-top">
         <td className="py-2 px-3 text-sm">
-          <Link to={`/admin/entregas/${entrega.id}`} className="text-aut-verde font-medium">
+          <Link to={`${basePath}/entregas/${entrega.id}`} className="text-aut-verde font-medium">
             {producto?.nombre}
           </Link>
           <p className="text-gray-500">{Number(entrega.ordenCompra?.volumenFinal)} {producto?.unidadMedida}</p>
@@ -86,7 +93,7 @@ export function EntregaRow({ entrega }) {
           )}
 
           <div className="flex flex-wrap gap-2">
-            {entrega.estado === 'PENDIENTE' && (
+            {!esOperadorDeposito && entrega.estado === 'PENDIENTE' && (
               <button
                 onClick={() => enTransito.mutate()}
                 disabled={enTransito.isPending}
@@ -112,13 +119,13 @@ export function EntregaRow({ entrega }) {
               </button>
             )}
 
-            {entrega.modalidad === 'ENTREGA_EN_CAMPO' && ['EN_TRANSITO', 'EN_RUTA_A_CAMPO'].includes(entrega.estado) && (
+            {!esOperadorDeposito && entrega.modalidad === 'ENTREGA_EN_CAMPO' && ['EN_TRANSITO', 'EN_RUTA_A_CAMPO'].includes(entrega.estado) && (
               <button onClick={() => setFormularioAbierto('campo')} className="text-aut-verde font-medium">
                 Confirmar entrega
               </button>
             )}
 
-            {!esTerminal && (
+            {!esOperadorDeposito && !esTerminal && (
               <button onClick={handleCancelar} disabled={cancelar.isPending} className="text-red-600 font-medium disabled:opacity-50">
                 Cancelar
               </button>

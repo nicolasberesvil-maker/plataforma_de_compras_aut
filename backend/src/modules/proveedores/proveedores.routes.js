@@ -9,10 +9,10 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', requireRole(['ADMIN', 'CONTADOR']), validate(listarProveedoresSchema, 'query'), proveedoresController.listar);
-router.post('/', requireRole(['ADMIN']), validate(crearProveedorSchema), proveedoresController.crear);
+router.post('/', requireRole(['ADMIN', 'CONTADOR']), validate(crearProveedorSchema), proveedoresController.crear);
 router.get('/:id', requireRole(['ADMIN', 'CONTADOR', 'PROVEEDOR']), proveedoresController.obtenerPorId);
-router.patch('/:id', requireRole(['ADMIN']), validate(actualizarProveedorSchema), proveedoresController.actualizar);
-router.patch('/:id/aprobar', requireRole(['ADMIN']), proveedoresController.aprobar);
-router.patch('/:id/suspender', requireRole(['ADMIN']), proveedoresController.suspender);
+router.patch('/:id', requireRole(['ADMIN', 'CONTADOR']), validate(actualizarProveedorSchema), proveedoresController.actualizar);
+router.patch('/:id/aprobar', requireRole(['ADMIN', 'CONTADOR']), proveedoresController.aprobar);
+router.patch('/:id/suspender', requireRole(['ADMIN', 'CONTADOR']), proveedoresController.suspender);
 
 export default router;

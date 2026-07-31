@@ -77,6 +77,29 @@ Mayúsculas y abreviaturas tipo "AGROQ", "x lt" sin prolijar. Es un cambio de da
 
 ---
 
+## 10. Paneles por rol para `CONTADOR` y `OPERADOR_DEPOSITO` — RESUELTO
+
+**Resuelto (2026-07):** Nicolás confirmó que `CONTADOR` es funcionalmente el administrador → queda con acceso completo a `/admin` (`PanelAdminLayout`), como ya estaba.
+
+`OPERADOR_DEPOSITO` en cambio **no** debe ver todo: solo remitos/entregas (qué está pendiente de despachar, disponible para retiro, etc.), no el resto de la operación de AUT (usuarios, productos, campañas, facturación...). Se creó `PanelDepositoLayout` + ruta `/deposito`, acotada a `EntregasAdminPage`/`EntregaDetailPage` reutilizadas. En esos componentes se ocultan para este rol las acciones que el backend ya le prohibía (despachar "en tránsito", cancelar, confirmar entrega en campo — ver `entregas.routes.js`): solo le quedan visibles "Marcar disponible" y "Confirmar retiro", que son las que sí tiene permitidas.
+
+Como consecuencia necesaria (el operador tiene que poder elegir depósito destino al marcar una entrega disponible), se amplió `GET /api/depositos*` de solo-`ADMIN` a `ADMIN, OPERADOR_DEPOSITO` (lectura únicamente; alta/edición/baja de depósitos sigue siendo solo `ADMIN`). El login ahora redirige a `OPERADOR_DEPOSITO` a `/deposito` en vez de `/admin`.
+
+**Bug encontrado y corregido después:** como el frontend ya le daba a `CONTADOR` el mismo `PanelAdminLayout` que `ADMIN` (todas las pestañas: usuarios, productores pendientes, proveedores, productos, campañas, pedidos sueltos, depósitos, movimientos de stock, entregas), pero el backend de fases anteriores solo le había dado a `CONTADOR` permiso de **lectura** en unos pocos módulos (`productores`, `proveedores`, `ordenes`) — el resto (`usuarios`, `productos`, `campañas`, `intenciones`, `depositos`, `stock-movimientos`, `entregas`, `adjudicaciones`) seguía siendo `ADMIN`-only. Resultado: `CONTADOR` veía las pestañas en el menú pero le tiraban 403 al entrar. Como confirmaste que `CONTADOR` = administrador, se agregó `CONTADOR` a `requireRole([...])` en todos esos endpoints (lectura y escritura) para que tenga paridad real con `ADMIN`, no solo acceso visual a las pestañas. También se corrigió un chequeo de rol hardcodeado en `entregas.service.js` (`obtenerPorId`) que seguía tirando 403 a `CONTADOR` aunque la ruta ya lo permitiera.
+
+---
+
+## 11. CUIT y datos legales de AUT en el PDF de factura (Fase 10)
+
+El PDF generado (`facturas.pdf.js`) no incluye el CUIT de AUT porque no tengo el dato real y no quise inventar un placeholder en un documento con implicancias fiscales. Falta:
+1. CUIT exacto de AUT.
+2. Domicilio fiscal completo (hoy dice solo "Franck, Santa Fe").
+3. Confirmar la alícuota real de percepción IIBB Santa Fe (hoy 2,5% referencial, ya señalado en el punto 8).
+
+No bloquea desarrollo, pero sí bloquea emitir facturas reales en producción.
+
+---
+
 ## Cómo responder
 
-Podés contestar cada punto en el chat o directamente editando este archivo. En cuanto tenga tu respuesta actualizo los documentos afectados. Quedan abiertos los puntos 3 (fecha de cierre 48 hs), 4 (entrega directa proveedor→productor), 6 (`Entrega.depositoId`), 7 (`unidadMedida` heurística), 8 (alícuota de IVA) y 9 (nombres de producto sin prolijar).
+Podés contestar cada punto en el chat o directamente editando este archivo. En cuanto tenga tu respuesta actualizo los documentos afectados. Quedan abiertos los puntos 3 (fecha de cierre 48 hs), 4 (entrega directa proveedor→productor), 6 (`Entrega.depositoId`), 7 (`unidadMedida` heurística), 8 (alícuota de IVA), 9 (nombres de producto sin prolijar) y 11 (datos legales de AUT para facturar).

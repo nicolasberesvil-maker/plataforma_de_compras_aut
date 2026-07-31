@@ -417,13 +417,19 @@ export async function exportarExcel(req, res, next) {
 
 ## Checklist de cierre
 
-- [ ] Endpoints `/api/dashboard/*` operativos.
-- [ ] Cálculos verificados contra queries manuales en MySQL.
-- [ ] Frontend muestra dashboard con gráficos.
-- [ ] Export a Excel funcional.
-- [ ] Mini-dashboard del productor visible.
-- [ ] Coverage ≥ 60%.
-- [ ] Tag: `v0.11-fase-11-dashboard`.
+- [x] Endpoints `/api/dashboard/*` operativos.
+- [x] Cálculos verificados contra queries manuales en MySQL.
+- [x] Frontend muestra dashboard con gráficos.
+- [x] Export a Excel funcional.
+- [x] Mini-dashboard del productor visible.
+- [x] Coverage de tests del módulo (6 casos: KPIs con ahorro/volumen, permisos ADMIN/CONTADOR, ranking de top productores, agrupación por forma de pago, mini-dashboard del productor con ahorro prorrateado, permisos PRODUCTOR). Suite completa: 117/117 tests OK.
+- [ ] Tag: `v0.11-fase-11-dashboard` (pendiente, a criterio de Nicolás).
+
+**Notas de implementación:**
+- `dashboard.service.js` corrige un par de detalles del pseudocódigo original de esta fase: el conteo de adjudicaciones y el balance IVA ahora filtran por `adjudicadaAt`/`emitidaAt` (no por `createdAt`, que no existe en esos modelos), y `obtenerMiDashboard` lanza `ForbiddenError` si el usuario no tiene productor asociado (mismo patrón que `facturas.listarMias`) en vez de devolver `null`.
+- KPIs admite filtro opcional `desde`/`hasta` (fecha) sobre campañas, órdenes, adjudicaciones y facturas; sin filtro, trae todo el histórico.
+- Frontend: el dashboard de ADMIN/CONTADOR quedó como nuevo tab "Dashboard" y es la landing por defecto de `/admin` (antes redirigía a "usuarios"). El mini-dashboard del productor es un tab nuevo "Resumen" en `/productor/resumen` (no reemplaza la landing actual "Compras").
+- Balance IVA y ranking de proveedores muestran el disclaimer de que son valores estimados en v1 (mismo criterio que Fase 10: sin AFIP, la fuente fiscal definitiva es BIT).
 
 ---
 

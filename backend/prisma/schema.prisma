@@ -133,6 +133,7 @@ model Producto {
   campanas    Campana[]
   intenciones IntencionCompra[]
   movimientosStock StockMovimiento[]
+  itemsFactura ItemFactura[]
 
   @@map("productos")
 }
@@ -481,6 +482,7 @@ model OrdenCompra {
   createdAt DateTime @default(now()) @map("created_at")
 
   entrega Entrega?
+  factura Factura?
 
   @@map("ordenes_compra")
 }
@@ -603,4 +605,57 @@ enum TipoMovimientoStock {
   TRANSFERENCIA_SALIDA
   TRANSFERENCIA_ENTRADA
   DEVOLUCION_PROVEEDOR
+}
+
+// ============================================================
+// FACTURACIÓN (Fase 10 — comprobantes internos, sin AFIP en v1)
+// ============================================================
+
+// Comprobante interno 1:1 con una OrdenCompra. En v1 no hay integración AFIP
+// (sin CAE): AUT exporta y carga manualmente en su sistema contable (BIT).
+model Factura {
+  id            Int         @id @default(autoincrement())
+  ordenCompraId Int         @unique @map("orden_compra_id")
+  ordenCompra   OrdenCompra @relation(fields: [ordenCompraId], references: [id])
+
+  tipo       TipoFactura
+  numero     String      @unique
+  puntoVenta String      @default("0001") @map("punto_venta")
+
+  // Snapshot de importes al momento de emitir (no se recalculan).
+  subtotalNeto     Decimal  @map("subtotal_neto") @db.Decimal(14, 2)
+  iva              Decimal  @db.Decimal(14, 2)
+  percepcionesIIBB Decimal? @map("percepciones_iibb") @db.Decimal(14, 2)
+  total            Decimal  @db.Decimal(14, 2)
+
+  pdfUrl String? @map("pdf_url")
+
+  emitidaAt DateTime @default(now()) @map("emitida_at")
+
+  items ItemFactura[]
+
+  @@index([tipo])
+  @@map("facturas")
+}
+
+enum TipoFactura {
+  A // Productor Responsable Inscripto
+  B // Productor Monotributista / resto
+}
+
+// Líneas de detalle de una factura (v1: siempre 1 línea, la de la orden).
+model ItemFactura {
+  id        Int      @id @default(autoincrement())
+  facturaId Int      @map("factura_id")
+  factura   Factura  @relation(fields: [facturaId], references: [id])
+  productoId Int     @map("producto_id")
+  producto  Producto @relation(fields: [productoId], references: [id])
+
+  descripcion    String
+  cantidad       Decimal @db.Decimal(12, 2)
+  precioUnitario Decimal @map("precio_unitario") @db.Decimal(12, 4)
+  alicuotaIva    Decimal @map("alicuota_iva") @db.Decimal(5, 2)
+  subtotal       Decimal @db.Decimal(14, 2)
+
+  @@map("items_factura")
 }

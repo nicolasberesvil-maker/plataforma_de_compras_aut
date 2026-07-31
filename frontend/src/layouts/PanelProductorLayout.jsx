@@ -5,10 +5,12 @@ import { Campanita } from '../features/notificaciones/components/Campanita';
 
 const TABS = [
   { to: '/productor', label: 'Compras', icon: '🛒', end: true },
+  { to: '/productor/resumen', label: 'Resumen', icon: '📊' },
   { to: '/productor/pedir', label: 'Pedir', icon: '➕' },
   { to: '/productor/mis-pedidos', label: 'Mis pedidos', icon: '📋' },
   { to: '/productor/mis-ordenes', label: 'Mis órdenes', icon: '🧾' },
   { to: '/productor/mis-entregas', label: 'Mis entregas', icon: '📦' },
+  { to: '/productor/mis-facturas', label: 'Mis facturas', icon: '💰' },
   { to: '/perfil', label: 'Perfil', icon: '👤' }
 ];
 

@@ -12,7 +12,8 @@ export function useLogin() {
     onSuccess: (data) => {
       setAuth(data.accessToken, data.usuario);
       const ruta = data.usuario.rol === 'PRODUCTOR' ? '/productor'
-        : data.usuario.rol === 'PROVEEDOR' ? '/proveedor' : '/admin';
+        : data.usuario.rol === 'PROVEEDOR' ? '/proveedor'
+        : data.usuario.rol === 'OPERADOR_DEPOSITO' ? '/deposito' : '/admin';
       navigate(ruta);
     }
   });

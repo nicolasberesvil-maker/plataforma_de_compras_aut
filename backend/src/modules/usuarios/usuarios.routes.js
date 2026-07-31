@@ -8,11 +8,11 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get('/', requireRole(['ADMIN']), validate(listarUsuariosSchema, 'query'), usuariosController.listar);
+router.get('/', requireRole(['ADMIN', 'CONTADOR']), validate(listarUsuariosSchema, 'query'), usuariosController.listar);
 router.get('/:id', usuariosController.obtenerPorId);
 router.patch('/:id', validate(actualizarUsuarioSchema), usuariosController.actualizar);
-router.patch('/:id/activar', requireRole(['ADMIN']), usuariosController.activar);
-router.patch('/:id/desactivar', requireRole(['ADMIN']), usuariosController.desactivar);
+router.patch('/:id/activar', requireRole(['ADMIN', 'CONTADOR']), usuariosController.activar);
+router.patch('/:id/desactivar', requireRole(['ADMIN', 'CONTADOR']), usuariosController.desactivar);
 router.post('/:id/cambiar-password', validate(cambiarPasswordSchema), usuariosController.cambiarPassword);
 
 export default router;

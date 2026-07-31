@@ -4,6 +4,7 @@ import { useLogout } from '../features/auth/hooks/useAuth';
 import { Campanita } from '../features/notificaciones/components/Campanita';
 
 const TABS = [
+  { to: '/admin/dashboard', label: 'Dashboard' },
   { to: '/admin/usuarios', label: 'Usuarios' },
   { to: '/admin/productores-pendientes', label: 'Productores pendientes' },
   { to: '/admin/proveedores', label: 'Proveedores' },
@@ -11,7 +12,8 @@ const TABS = [
   { to: '/admin/campanas', label: 'Campañas' },
   { to: '/admin/solicitudes', label: 'Pedidos sueltos' },
   { to: '/admin/depositos', label: 'Depósitos' },
-  { to: '/admin/entregas', label: 'Entregas' }
+  { to: '/admin/entregas', label: 'Entregas' },
+  { to: '/admin/facturas', label: 'Facturas' }
 ];
 
 export function PanelAdminLayout() {

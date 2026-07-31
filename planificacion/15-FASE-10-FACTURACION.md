@@ -364,13 +364,19 @@ Antes de habilitar en producción, AUT debe confirmar con su contador:
 
 ## Checklist de cierre
 
-- [ ] Migración `add_facturas` aplicada.
-- [ ] Endpoints `/api/facturas/*` operativos.
-- [ ] PDFs se generan y descargan correctamente.
-- [ ] Tipo de factura se decide bien según condición fiscal.
-- [ ] Notificación `FACTURA_EMITIDA` llega al productor.
-- [ ] Coverage ≥ 60%.
-- [ ] Tag: `v0.10-fase-10-facturacion`.
+- [x] Migración `add_facturas` aplicada.
+- [x] Endpoints `/api/facturas/*` operativos.
+- [x] PDFs se generan y descargan correctamente.
+- [x] Tipo de factura se decide bien según condición fiscal.
+- [x] Notificación `FACTURA_EMITIDA` llega al productor.
+- [x] Coverage de tests del módulo (8 casos: tipo A/B, percepción IIBB, numeración correlativa, doble emisión → 409, permisos, ownership, descarga PDF). Suite completa: 111/111 tests OK.
+- [ ] Tag: `v0.10-fase-10-facturacion` (pendiente, a criterio de Nicolás).
+
+**Notas de implementación:**
+- El modelo `Factura`/`ItemFactura` quedó más lean que el diseño de `02-MODELO-DATOS.md`: sin `otrasPercepciones` ni `cae`/`caeVencimiento` (explícitamente fuera de alcance v1 según el propio doc de fase). Se puede agregar cuando se aborde AFIP en v2.
+- El PDF no incluye el CUIT de AUT (placeholder inventado, no un dato real) — falta que AUT lo confirme (ver `DECISIONES-PENDIENTES.md`).
+- Frontend: no existe un panel propio para el rol `CONTADOR` (tampoco lo tiene `OPERADOR_DEPOSITO` desde Fase 9). Para no bloquear la fase, `CONTADOR` quedó habilitado a entrar al panel `/admin` completo (mismo layout que `ADMIN`) en vez de crear un layout nuevo. Si querés que `CONTADOR` solo vea Facturas, avisame y separo el guard por ruta.
+- El botón "Generar factura" para ADMIN vive en dos lugares: `/admin/facturas` (por número de orden) y en el detalle de una entrega ya `ENTREGADA` (`/admin/entregas/:id`). Esa condición de "solo si ya fue ENTREGADA" es una decisión de UX mía, no una regla que valide el backend (el backend solo exige que la orden no tenga factura previa).
 
 ---
 

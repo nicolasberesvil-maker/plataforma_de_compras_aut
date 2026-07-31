@@ -2,12 +2,17 @@ import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { entregasApi } from '../api/entregas.api';
 import { EstadoEntregaBadge } from '../components/EstadoEntregaBadge';
+import { BotonGenerarFactura } from '../../facturas/components/BotonGenerarFactura';
 import { useAuthStore } from '../../../store/authStore';
 
 export function EntregaDetailPage() {
   const { id } = useParams();
   const usuario = useAuthStore((s) => s.usuario);
-  const esAdmin = usuario?.rol === 'ADMIN';
+  const rol = usuario?.rol;
+  const esOperadorDeposito = rol === 'OPERADOR_DEPOSITO';
+  const puedeVerProductor = ['ADMIN', 'CONTADOR', 'OPERADOR_DEPOSITO'].includes(rol);
+  const puedeFacturar = ['ADMIN', 'CONTADOR'].includes(rol);
+  const volverA = esOperadorDeposito ? '/deposito' : puedeFacturar ? '/admin/entregas' : '/productor/mis-entregas';
 
   const { data, isLoading } = useQuery({
     queryKey: ['entregas', id],
@@ -24,7 +29,7 @@ export function EntregaDetailPage() {
     <div className="max-w-lg mx-auto space-y-4 p-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">Detalle de entrega</h2>
-        <Link to={esAdmin ? '/admin/entregas' : '/productor/mis-entregas'} className="text-sm text-aut-verde font-medium">
+        <Link to={volverA} className="text-sm text-aut-verde font-medium">
           Volver
         </Link>
       </div>
@@ -40,7 +45,7 @@ export function EntregaDetailPage() {
 
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div><span className="text-gray-500">Modalidad: </span>{entrega.modalidad === 'RETIRO_EN_DEPOSITO' ? 'Retiro en depósito' : 'Entrega en campo'}</div>
-          {esAdmin && <div><span className="text-gray-500">Productor: </span>{entrega.productor?.usuario?.nombre} {entrega.productor?.usuario?.apellido}</div>}
+          {puedeVerProductor && <div><span className="text-gray-500">Productor: </span>{entrega.productor?.usuario?.nombre} {entrega.productor?.usuario?.apellido}</div>}
         </div>
 
         {entrega.modalidad === 'RETIRO_EN_DEPOSITO' && entrega.deposito && (
@@ -62,6 +67,12 @@ export function EntregaDetailPage() {
         {entrega.estado === 'CANCELADA' && entrega.observaciones && (
           <div className="text-sm border-t pt-3">
             <p className="text-red-600 font-medium">Motivo de cancelación: {entrega.observaciones}</p>
+          </div>
+        )}
+
+        {puedeFacturar && entrega.estado === 'ENTREGADA' && (
+          <div className="border-t pt-3">
+            <BotonGenerarFactura ordenCompraId={entrega.ordenCompra.id} />
           </div>
         )}
       </div>
