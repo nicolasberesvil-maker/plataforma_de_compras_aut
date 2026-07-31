@@ -11,6 +11,7 @@ router.use(authenticate);
 router.get('/pendientes', requireRole(['ADMIN']), productoresController.listarPendientes);
 router.get('/', requireRole(['ADMIN', 'CONTADOR']), validate(listarProductoresSchema, 'query'), productoresController.listar);
 router.get('/:id', requireRole(['ADMIN', 'CONTADOR', 'PRODUCTOR']), productoresController.obtenerPorId);
+router.get('/:id/cuenta-corriente', requireRole(['ADMIN', 'CONTADOR', 'PRODUCTOR']), productoresController.cuentaCorriente);
 router.patch('/:id', requireRole(['ADMIN', 'PRODUCTOR']), validate(actualizarProductorSchema), productoresController.actualizar);
 router.patch('/:id/aprobar', requireRole(['ADMIN']), productoresController.aprobar);
 router.patch('/:id/rechazar', requireRole(['ADMIN']), validate(rechazarProductorSchema), productoresController.rechazar);

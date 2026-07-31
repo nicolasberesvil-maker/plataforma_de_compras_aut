@@ -40,6 +40,7 @@ model Usuario {
   passwordResetTokens PasswordResetToken[]
   campanasCreadas     Campana[]            @relation("CampanasCreadas")
   notificaciones      Notificacion[]
+  movimientosStockEjecutados StockMovimiento[]
 
   @@map("usuarios")
 }
@@ -131,6 +132,7 @@ model Producto {
 
   campanas    Campana[]
   intenciones IntencionCompra[]
+  movimientosStock StockMovimiento[]
 
   @@map("productos")
 }
@@ -504,14 +506,16 @@ model Entrega {
   modalidad ModalidadEntrega
   estado    EstadoEntrega    @default(PENDIENTE)
 
-  // FK a Deposito se agrega en la migración de Fase 8, cuando ese modelo exista.
-  depositoId     Int?    @map("deposito_id")
-  direccionCampo String? @map("direccion_campo")
+  depositoId     Int?      @map("deposito_id")
+  deposito       Deposito? @relation(fields: [depositoId], references: [id])
+  direccionCampo String?   @map("direccion_campo")
 
   fechaEstimada DateTime? @map("fecha_estimada")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  movimientosStock StockMovimiento[]
 
   @@index([estado])
   @@map("entregas")
@@ -524,4 +528,72 @@ enum EstadoEntrega {
   EN_RUTA_A_CAMPO
   ENTREGADA
   CANCELADA
+}
+
+// ============================================================
+// DEPÓSITOS Y STOCK (Fase 8 — libro append-only)
+// ============================================================
+
+// Galpón físico de AUT donde llega y se almacena mercadería.
+// NUNCA se borra, solo se desactiva (histórico fiscal).
+model Deposito {
+  id               Int      @id @default(autoincrement())
+  nombre           String   @unique
+  localidad        String
+  direccion        String
+  responsable      String?
+  telefonoContacto String?  @map("telefono_contacto")
+  horarioAtencion  String?  @map("horario_atencion")
+  capacidadMaxima  Decimal? @map("capacidad_maxima") @db.Decimal(12, 2)
+  activo           Boolean  @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  movimientosStock StockMovimiento[]
+  entregas         Entrega[]
+
+  @@map("depositos")
+}
+
+// Libro de movimientos de stock (append-only). El stock actual NUNCA se
+// guarda como campo mutable: siempre es SUM(cantidad * signo) agrupado por
+// depósito y producto (trazabilidad fiscal, sin race conditions).
+model StockMovimiento {
+  id Int @id @default(autoincrement())
+
+  depositoId Int      @map("deposito_id")
+  deposito   Deposito @relation(fields: [depositoId], references: [id])
+  productoId Int      @map("producto_id")
+  producto   Producto @relation(fields: [productoId], references: [id])
+
+  tipo     TipoMovimientoStock
+  cantidad Decimal             @db.Decimal(12, 2)
+  signo    Int
+
+  // Trazabilidad: presente cuando el movimiento se originó en una entrega (Fase 9).
+  entregaId Int?     @map("entrega_id")
+  entrega   Entrega? @relation(fields: [entregaId], references: [id])
+
+  proveedorOrigen String? @map("proveedor_origen")
+  observaciones   String? @db.Text
+
+  ejecutadoPorId Int     @map("ejecutado_por_id")
+  ejecutadoPor   Usuario @relation(fields: [ejecutadoPorId], references: [id])
+
+  fecha DateTime @default(now())
+
+  @@index([depositoId, productoId])
+  @@index([fecha])
+  @@map("stock_movimientos")
+}
+
+enum TipoMovimientoStock {
+  INGRESO_PROVEEDOR
+  EGRESO_PRODUCTOR
+  AJUSTE_INVENTARIO_POSITIVO
+  AJUSTE_INVENTARIO_NEGATIVO
+  TRANSFERENCIA_SALIDA
+  TRANSFERENCIA_ENTRADA
+  DEVOLUCION_PROVEEDOR
 }

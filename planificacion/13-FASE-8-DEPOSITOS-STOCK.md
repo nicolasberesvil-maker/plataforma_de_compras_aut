@@ -478,12 +478,12 @@ for (const d of depositosIniciales) {
 
 ## Checklist de cierre
 
-- [ ] Migración `add_depositos_stock` aplicada.
-- [ ] Endpoints `/api/depositos/*` y `/api/stock-movimientos/*` operativos.
-- [ ] Endpoint `/api/productores/:id/cuenta-corriente` devuelve totales consistentes con las órdenes y entregas reales.
-- [ ] Seed con depósitos iniciales (a confirmar lista real con AUT).
-- [ ] Frontend permite ver stock por depósito y registrar movimientos.
-- [ ] Coverage ≥ 60%.
+- [x] Migración `add_depositos_stock` aplicada.
+- [x] Endpoints `/api/depositos/*` y `/api/stock-movimientos/*` operativos.
+- [x] Endpoint `/api/productores/:id/cuenta-corriente` devuelve totales consistentes con las órdenes y entregas reales.
+- [x] Seed con depósitos iniciales (a confirmar lista real con AUT).
+- [x] Frontend permite ver stock por depósito y registrar movimientos.
+- [x] Coverage ≥ 60%.
 - [ ] Tag: `v0.8-fase-8-depositos-stock`.
 
 ---

@@ -15,6 +15,8 @@ import cotizacionesRoutes from './modules/cotizaciones/cotizaciones.routes.js';
 import notificacionesRoutes from './modules/notificaciones/notificaciones.routes.js';
 import adjudicacionesRoutes from './modules/adjudicaciones/adjudicaciones.routes.js';
 import ordenesRoutes from './modules/ordenes/ordenes.routes.js';
+import depositosRoutes from './modules/depositos/depositos.routes.js';
+import stockRoutes from './modules/stock/stock.routes.js';
 
 const app = express();
 
@@ -43,6 +45,8 @@ app.use('/api/cotizaciones', cotizacionesRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
 app.use('/api/adjudicaciones', adjudicacionesRoutes);
 app.use('/api/ordenes', ordenesRoutes);
+app.use('/api/depositos', depositosRoutes);
+app.use('/api/stock-movimientos', stockRoutes);
 
 // TODO: aquí van los routers del resto de módulos (los va a sumar cada fase)
 

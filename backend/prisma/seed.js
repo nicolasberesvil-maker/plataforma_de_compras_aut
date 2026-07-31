@@ -284,6 +284,14 @@ const productosAgroquimicosYFertilizantes = [
   { nombre: 'INOC PACK P/SOJA (T+C+MET) P/2000 kg', categoria: 'INOCULANTE', unidadMedida: 'KILO', alicuotaIva: 21 },
 ];
 
+// Nota crítica: la lista real de depósitos debe ser confirmada por AUT antes
+// del primer deploy. Estos valores son un placeholder (Fase 8).
+const depositosIniciales = [
+  { nombre: 'Galpón Central Franck', localidad: 'Franck', direccion: 'Av. Belgrano 1450', activo: true },
+  { nombre: 'Depósito Progreso', localidad: 'Progreso', direccion: 'Por confirmar', activo: true },
+  { nombre: 'Depósito Colonia Nueva', localidad: 'Colonia Nueva', direccion: 'Por confirmar', activo: true }
+];
+
 async function main() {
   for (const p of productosAgroquimicosYFertilizantes) {
     await prisma.producto.upsert({
@@ -293,6 +301,15 @@ async function main() {
     });
   }
   console.log(`✅ ${productosAgroquimicosYFertilizantes.length} productos sembrados (agroquímicos + fertilizantes)`);
+
+  for (const d of depositosIniciales) {
+    await prisma.deposito.upsert({
+      where: { nombre: d.nombre },
+      update: {},
+      create: d
+    });
+  }
+  console.log(`✅ ${depositosIniciales.length} depósitos sembrados`);
 }
 
 main().finally(() => prisma.$disconnect());

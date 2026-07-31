@@ -1,4 +1,5 @@
 import * as productoresService from './productores.service.js';
+import { obtenerCuentaCorriente } from './productores.cuenta-corriente.js';
 
 export async function listar(req, res, next) {
   try {
@@ -39,5 +40,14 @@ export async function rechazar(req, res, next) {
   try {
     await productoresService.rechazar(Number(req.params.id), req.body.motivo);
     res.status(204).send();
+  } catch (err) { next(err); }
+}
+
+export async function cuentaCorriente(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    await productoresService.obtenerPorId(id, req.usuario);
+    const cuentaCorriente = await obtenerCuentaCorriente(id);
+    res.json(cuentaCorriente);
   } catch (err) { next(err); }
 }

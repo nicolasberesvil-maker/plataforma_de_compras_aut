@@ -23,6 +23,10 @@ import { CotizacionFormPage } from './features/cotizaciones/pages/CotizacionForm
 import { MisCotizacionesPage } from './features/cotizaciones/pages/MisCotizacionesPage';
 import { ComparadorPage } from './features/adjudicaciones/pages/ComparadorPage';
 import { MisOrdenesPage } from './features/ordenes/pages/MisOrdenesPage';
+import { DepositosListPage } from './features/depositos/pages/DepositosListPage';
+import { DepositoFormPage } from './features/depositos/pages/DepositoFormPage';
+import { DepositoDetailPage } from './features/depositos/pages/DepositoDetailPage';
+import { MovimientosStockPage } from './features/depositos/pages/MovimientosStockPage';
 import { PanelAdminLayout } from './layouts/PanelAdminLayout';
 import { PanelProductorLayout } from './layouts/PanelProductorLayout';
 import { PanelProveedorLayout } from './layouts/PanelProveedorLayout';
@@ -75,6 +79,11 @@ export default function App() {
             <Route path="campanas/:id/editar" element={<CampanaFormPage />} />
             <Route path="campanas/:id/comparador" element={<ComparadorPage />} />
             <Route path="solicitudes" element={<BandejaPedidosPage />} />
+            <Route path="depositos" element={<DepositosListPage />} />
+            <Route path="depositos/nuevo" element={<DepositoFormPage />} />
+            <Route path="depositos/:id" element={<DepositoDetailPage />} />
+            <Route path="depositos/:id/editar" element={<DepositoFormPage />} />
+            <Route path="movimientos-stock" element={<MovimientosStockPage />} />
           </Route>
 
           <Route
