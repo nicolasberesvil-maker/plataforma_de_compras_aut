@@ -10,7 +10,8 @@ const TABS = [
   { to: '/admin/productos', label: 'Productos' },
   { to: '/admin/campanas', label: 'Campañas' },
   { to: '/admin/solicitudes', label: 'Pedidos sueltos' },
-  { to: '/admin/depositos', label: 'Depósitos' }
+  { to: '/admin/depositos', label: 'Depósitos' },
+  { to: '/admin/entregas', label: 'Entregas' }
 ];
 
 export function PanelAdminLayout() {

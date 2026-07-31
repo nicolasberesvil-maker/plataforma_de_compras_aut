@@ -8,6 +8,7 @@ const TABS = [
   { to: '/productor/pedir', label: 'Pedir', icon: '➕' },
   { to: '/productor/mis-pedidos', label: 'Mis pedidos', icon: '📋' },
   { to: '/productor/mis-ordenes', label: 'Mis órdenes', icon: '🧾' },
+  { to: '/productor/mis-entregas', label: 'Mis entregas', icon: '📦' },
   { to: '/perfil', label: 'Perfil', icon: '👤' }
 ];
 

@@ -394,14 +394,16 @@ function BotonConfirmarRecepcion({ entregaId }) {
 
 ## Checklist de cierre
 
-- [ ] Endpoints `/api/entregas/*` operativos.
-- [ ] Util de transiciones de estado implementada y probada.
-- [ ] Notificación `ENTREGA_DISPONIBLE` llega al productor (email + campanita).
-- [ ] Confirmar retiro genera movimiento de stock automáticamente.
-- [ ] Productor tiene su propio botón para confirmar entrega directa proveedor→productor (sin depender de que AUT lo cargue).
-- [ ] Frontend muestra tablero admin y vista productor.
-- [ ] Coverage ≥ 60%.
+- [x] Endpoints `/api/entregas/*` operativos.
+- [x] Util de transiciones de estado implementada y probada.
+- [x] Notificación `ENTREGA_DISPONIBLE` llega al productor (email + campanita).
+- [x] Confirmar retiro genera movimiento de stock automáticamente.
+- [x] Productor tiene su propio botón para confirmar entrega directa proveedor→productor (sin depender de que AUT lo cargue).
+- [x] Frontend muestra tablero admin y vista productor.
+- [x] Coverage ≥ 60% (módulo entregas: 9 tests cubriendo transiciones, egreso de stock y ownership).
 - [ ] Tag: `v0.9-fase-9-entregas`.
+
+> Nota: `Entrega.depositoId` no se asignaba en ningún punto anterior (ver `DECISIONES-PENDIENTES.md` #6) — se resolvió permitiendo elegirlo al marcar en-tránsito/disponible. Pendiente de confirmación de Nicolás si prefiere otro momento de asignación.
 
 ---
 

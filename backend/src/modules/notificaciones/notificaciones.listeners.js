@@ -24,6 +24,9 @@ export function registrarListenersNotificaciones() {
   eventBus.on('CAMPANA_ADJUDICADA', onCampanaAdjudicada);
   eventBus.on('ORDEN_GENERADA', onOrdenGenerada);
   eventBus.on('COTIZACION_RECHAZADA', onCotizacionRechazada);
+  eventBus.on('ENTREGA_EN_TRANSITO', onEntregaEnTransito);
+  eventBus.on('ENTREGA_DISPONIBLE', onEntregaDisponible);
+  eventBus.on('ENTREGA_CONFIRMADA', onEntregaConfirmada);
 
   logger.info('Listeners de notificaciones registrados');
 }
@@ -278,6 +281,59 @@ async function onCotizacionRechazada({ cotizacionId, proveedorId }) {
     });
   } catch (err) {
     logger.error({ err, cotizacionId }, 'Error notificando COTIZACION_RECHAZADA');
+  }
+}
+
+async function onEntregaEnTransito({ entregaId, productorId }) {
+  try {
+    const productor = await productorService.obtenerPorId(productorId);
+    await notificacionesService.crearYEnviar({
+      usuarioId: productor.usuarioId,
+      tipo: 'ENTREGA_EN_TRANSITO',
+      titulo: 'Tu mercadería está en camino',
+      mensaje: 'AUT ya despachó tu pedido.',
+      enlaceRelativo: `/entregas/${entregaId}`,
+      metadatos: { entregaId }
+    });
+  } catch (err) {
+    logger.error({ err, entregaId }, 'Error notificando ENTREGA_EN_TRANSITO');
+  }
+}
+
+/** Notif más importante del módulo: el productor tiene que enterarse YA de que puede pasar a retirar. */
+async function onEntregaDisponible({ entregaId, productorId, depositoId }) {
+  try {
+    const [productor, deposito] = await Promise.all([
+      productorService.obtenerPorId(productorId),
+      prisma.deposito.findUnique({ where: { id: depositoId } })
+    ]);
+
+    await notificacionesService.crearYEnviar({
+      usuarioId: productor.usuarioId,
+      tipo: 'ENTREGA_DISPONIBLE',
+      titulo: 'Tu mercadería está lista para retirar',
+      mensaje: `Podés pasar a retirar por ${deposito.nombre}, ${deposito.direccion}, ${deposito.localidad}.${deposito.horarioAtencion ? ` Horario: ${deposito.horarioAtencion}.` : ''}`,
+      enlaceRelativo: `/entregas/${entregaId}`,
+      metadatos: { entregaId, depositoId }
+    });
+  } catch (err) {
+    logger.error({ err, entregaId }, 'Error notificando ENTREGA_DISPONIBLE');
+  }
+}
+
+async function onEntregaConfirmada({ entregaId, productorId }) {
+  try {
+    const productor = await productorService.obtenerPorId(productorId);
+    await notificacionesService.crearYEnviar({
+      usuarioId: productor.usuarioId,
+      tipo: 'ENTREGA_CONFIRMADA',
+      titulo: 'Entrega confirmada',
+      mensaje: 'Confirmamos que recibiste tu pedido. ¡Gracias por comprar en grupo con AUT!',
+      enlaceRelativo: `/entregas/${entregaId}`,
+      metadatos: { entregaId }
+    });
+  } catch (err) {
+    logger.error({ err, entregaId }, 'Error notificando ENTREGA_CONFIRMADA');
   }
 }
 

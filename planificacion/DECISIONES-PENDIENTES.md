@@ -49,6 +49,34 @@ Para el botón de confirmación del productor (regla D.5) reutilicé la modalida
 
 ---
 
+## 6. `Entrega.depositoId` nunca se asignaba (Fase 9)
+
+**Contexto:** la `Entrega` se crea en la Fase 7 (adjudicación) sin `depositoId`, incluso para modalidad `RETIRO_EN_DEPOSITO`. El doc de Fase 9 (`14-FASE-9-ENTREGAS.md`) asumía que `confirmarRetiro` podía usar `entrega.depositoId` directamente para generar el movimiento de stock, pero nada lo completaba antes — habría quedado `null` siempre y roto el flujo.
+
+**Resuelto para poder avanzar:** agregué `depositoId` como parámetro opcional en `PATCH /:id/en-transito` y `PATCH /:id/disponible`. El ADMIN/operador elige el depósito ahí (recién se sabe en ese momento, no al adjudicar). `marcarDisponible` exige que haya un `depositoId` (ya guardado o recién enviado) antes de dejar la entrega `DISPONIBLE_PARA_RETIRO`; `confirmarRetiro` valida de nuevo por las dudas.
+
+**Confirmame:** si preferís que el depósito se defina antes (por ejemplo al adjudicar, con un depósito default por producto/campaña) en vez de manualmente por el operador en Fase 9, lo cambio.
+
+---
+
+## 7. `unidadMedida` de varios de los 275 productos, inferida por heurística de texto
+
+Se infirió automáticamente a partir de sufijos del nombre del proveedor (ej. "x lt", "x kg", "x 25 kg"). Conviene una revisión manual de alguien de AUT antes de producción, en particular los que quedaron en `UNIDAD` por defecto. Detalle en `08-FASE-3-PRODUCTOS.md`, nota final de la sección 3.
+
+---
+
+## 8. Alícuota de IVA (10,5% agroquímicos/fertilizantes, 21% inoculantes) es referencial
+
+Falta que el contador de AUT la confirme antes de facturar en serio. No bloquea desarrollo. Detalle en `08-FASE-3-PRODUCTOS.md`, nota final de la sección 3.
+
+---
+
+## 9. Nombres de producto tal cual figuran en la lista del proveedor
+
+Mayúsculas y abreviaturas tipo "AGROQ", "x lt" sin prolijar. Es un cambio de dato puntual si Nicolás/AUT quieren mostrarle al productor un nombre más claro, no afecta arquitectura. Detalle en `08-FASE-3-PRODUCTOS.md`, punto 191.
+
+---
+
 ## Cómo responder
 
-Podés contestar cada punto en el chat o directamente editando este archivo. En cuanto tenga tu respuesta actualizo los documentos afectados. Quedan abiertos los puntos 3 (fecha de cierre 48 hs) y 4 (entrega directa proveedor→productor) — afectan `10-FASE-5-INTENCIONES.md` y `02-MODELO-DATOS.md`/`14-FASE-9-ENTREGAS.md` respectivamente. Ver estado consolidado en `PENDIENTES.md`.
+Podés contestar cada punto en el chat o directamente editando este archivo. En cuanto tenga tu respuesta actualizo los documentos afectados. Quedan abiertos los puntos 3 (fecha de cierre 48 hs), 4 (entrega directa proveedor→productor), 6 (`Entrega.depositoId`), 7 (`unidadMedida` heurística), 8 (alícuota de IVA) y 9 (nombres de producto sin prolijar).

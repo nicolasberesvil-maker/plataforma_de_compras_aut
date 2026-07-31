@@ -27,6 +27,9 @@ import { DepositosListPage } from './features/depositos/pages/DepositosListPage'
 import { DepositoFormPage } from './features/depositos/pages/DepositoFormPage';
 import { DepositoDetailPage } from './features/depositos/pages/DepositoDetailPage';
 import { MovimientosStockPage } from './features/depositos/pages/MovimientosStockPage';
+import { EntregasAdminPage } from './features/entregas/pages/EntregasAdminPage';
+import { EntregaDetailPage } from './features/entregas/pages/EntregaDetailPage';
+import { MisEntregasPage } from './features/entregas/pages/MisEntregasPage';
 import { PanelAdminLayout } from './layouts/PanelAdminLayout';
 import { PanelProductorLayout } from './layouts/PanelProductorLayout';
 import { PanelProveedorLayout } from './layouts/PanelProveedorLayout';
@@ -84,6 +87,8 @@ export default function App() {
             <Route path="depositos/:id" element={<DepositoDetailPage />} />
             <Route path="depositos/:id/editar" element={<DepositoFormPage />} />
             <Route path="movimientos-stock" element={<MovimientosStockPage />} />
+            <Route path="entregas" element={<EntregasAdminPage />} />
+            <Route path="entregas/:id" element={<EntregaDetailPage />} />
           </Route>
 
           <Route
@@ -94,6 +99,8 @@ export default function App() {
             <Route path="pedir" element={<PedirProductoPage />} />
             <Route path="mis-pedidos" element={<MisPedidosPage />} />
             <Route path="mis-ordenes" element={<MisOrdenesPage />} />
+            <Route path="mis-entregas" element={<MisEntregasPage />} />
+            <Route path="entregas/:id" element={<EntregaDetailPage />} />
             <Route path="campanas/:id" element={<CampanaProductorDetailPage />} />
           </Route>
 

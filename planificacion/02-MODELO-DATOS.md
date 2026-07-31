@@ -417,7 +417,7 @@ model IntencionCompra {
   // Un productor solo puede tener UNA intención por campaña. No aplica a
   // pedidos sueltos: MySQL no considera duplicados los NULL en un índice
   // único, así que un mismo productor puede tener varias intenciones con
-  // campanaId = null (permitido, regla resuelta en PENDIENTES.md #1).
+  // campanaId = null (permitido, regla resuelta en DECISIONES-PENDIENTES.md #2).
   @@unique([campanaId, productorId])
   @@index([estado])
   @@index([productoId, estado])

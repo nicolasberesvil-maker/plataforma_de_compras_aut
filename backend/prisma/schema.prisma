@@ -510,7 +510,14 @@ model Entrega {
   deposito       Deposito? @relation(fields: [depositoId], references: [id])
   direccionCampo String?   @map("direccion_campo")
 
-  fechaEstimada DateTime? @map("fecha_estimada")
+  fechaEstimada        DateTime? @map("fecha_estimada")
+  fechaDisponibleDesde DateTime? @map("fecha_disponible_desde")
+  fechaEntregadaAt     DateTime? @map("fecha_entregada_at")
+
+  // Datos de quien recibió físicamente (retiro en depósito o entrega en campo).
+  recibidaPorNombre String? @map("recibida_por_nombre")
+  recibidaPorDni    String? @map("recibida_por_dni")
+  observaciones     String? @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -17,6 +17,7 @@ import adjudicacionesRoutes from './modules/adjudicaciones/adjudicaciones.routes
 import ordenesRoutes from './modules/ordenes/ordenes.routes.js';
 import depositosRoutes from './modules/depositos/depositos.routes.js';
 import stockRoutes from './modules/stock/stock.routes.js';
+import entregasRoutes from './modules/entregas/entregas.routes.js';
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/adjudicaciones', adjudicacionesRoutes);
 app.use('/api/ordenes', ordenesRoutes);
 app.use('/api/depositos', depositosRoutes);
 app.use('/api/stock-movimientos', stockRoutes);
+app.use('/api/entregas', entregasRoutes);
 
 // TODO: aquí van los routers del resto de módulos (los va a sumar cada fase)
 
