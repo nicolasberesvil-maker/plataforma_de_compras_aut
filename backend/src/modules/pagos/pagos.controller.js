@@ -2,7 +2,7 @@ import * as pagosService from './pagos.service.js';
 
 export async function crear(req, res, next) {
   try {
-    const pago = await pagosService.crear(req.body, req.usuario.id);
+    const pago = await pagosService.crear(req.body, req.usuario);
     res.status(201).json({ pago });
   } catch (err) { next(err); }
 }

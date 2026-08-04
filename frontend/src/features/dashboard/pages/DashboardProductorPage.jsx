@@ -11,7 +11,7 @@ export function DashboardProductorPage() {
   const producto = proximaEntrega?.ordenCompra?.adjudicacion?.campana?.producto;
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 p-4">
+    <div className="space-y-4">
       <h2 className="text-lg font-bold">Mi resumen</h2>
 
       {isLoading ? (

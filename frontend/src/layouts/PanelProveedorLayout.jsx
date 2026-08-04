@@ -1,54 +1,83 @@
+import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { ClipboardList, DollarSign, History, CreditCard, UserCircle, Menu, LogOut } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useLogout } from '../features/auth/hooks/useAuth';
 import { Campanita } from '../features/notificaciones/components/Campanita';
 
-const TABS = [
-  { to: '/proveedor', label: 'Licitaciones', icon: '📋', end: true },
-  { to: '/proveedor/mis-cotizaciones', label: 'Mis cotizaciones', icon: '💵' },
-  { to: '/perfil', label: 'Perfil', icon: '👤' }
+const NAV_ITEMS = [
+  { to: '/proveedor', label: 'Licitaciones', icon: ClipboardList, end: true },
+  { to: '/proveedor/mis-cotizaciones', label: 'Mis cotizaciones', icon: DollarSign },
+  { to: '/proveedor/mis-ventas', label: 'Historial de ventas', icon: History },
+  { to: '/proveedor/mi-cuenta', label: 'Mi cuenta', icon: CreditCard },
+  { to: '/perfil', label: 'Perfil', icon: UserCircle }
 ];
 
 export function PanelProveedorLayout() {
   const usuario = useAuthStore((s) => s.usuario);
   const logout = useLogout();
+  const [sidebarAbierto, setSidebarAbierto] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16">
-      <header className="bg-white border-b px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-        <div>
-          <h1 className="font-bold text-aut-verde">AUT Compras</h1>
-          <p className="text-xs text-gray-500">{usuario?.nombre}</p>
+    <div className="min-h-screen bg-gray-50 md:flex">
+      {sidebarAbierto && (
+        <div className="fixed inset-0 bg-black/30 z-20 md:hidden" onClick={() => setSidebarAbierto(false)} />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-30 w-64 bg-white border-r flex flex-col transition-transform duration-200 md:static md:translate-x-0
+          ${sidebarAbierto ? 'translate-x-0' : '-translate-x-full'}`}
+      >
+        <div className="h-16 flex items-center px-5 border-b shrink-0">
+          <span className="font-bold text-aut-verde text-lg">AUT Compras</span>
         </div>
-        <div className="flex items-center gap-1">
-          <Campanita />
-          <button onClick={() => logout.mutate()} className="text-aut-naranja text-sm font-medium px-2">
+
+        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+          {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              onClick={() => setSidebarAbierto(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive ? 'bg-aut-verde/10 text-aut-verde' : 'text-gray-600 hover:bg-gray-100'
+                }`
+              }
+            >
+              <Icon size={18} className="shrink-0" />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="border-t p-3 shrink-0">
+          <button
+            onClick={() => logout.mutate()}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-aut-naranja hover:bg-orange-50"
+          >
+            <LogOut size={18} />
             Salir
           </button>
         </div>
-      </header>
+      </aside>
 
-      <main>
-        <Outlet />
-      </main>
+      <div className="flex-1 min-w-0">
+        <header className="bg-white border-b h-16 px-4 md:px-6 flex items-center justify-between sticky top-0 z-10">
+          <button onClick={() => setSidebarAbierto(true)} className="text-gray-600 md:hidden" aria-label="Abrir menú">
+            <Menu size={22} />
+          </button>
+          <span className="hidden md:block" />
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-gray-600">{usuario?.nombre}</span>
+            <Campanita />
+          </div>
+        </header>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex z-10">
-        {TABS.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            end={tab.end}
-            className={({ isActive }) =>
-              `flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium ${
-                isActive ? 'text-aut-verde' : 'text-gray-500'
-              }`
-            }
-          >
-            <span className="text-lg">{tab.icon}</span>
-            {tab.label}
-          </NavLink>
-        ))}
-      </nav>
+        <main className="p-4 md:p-6">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

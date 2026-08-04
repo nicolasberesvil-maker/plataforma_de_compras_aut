@@ -63,7 +63,12 @@ export function BandejaPedidosPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">Pedidos sueltos</h2>
+        <div>
+          <h2 className="text-lg font-bold">Pedidos sueltos</h2>
+          <p className="text-sm text-gray-500">
+            Pedidos que un productor cargó por su cuenta, fuera de una compra colectiva ya abierta. Seleccioná los que sean del mismo producto y agrupalos para armar una compra nueva.
+          </p>
+        </div>
         {tab === 'bandeja' && (
           <button
             onClick={() => setMostrarModal(true)}
@@ -136,6 +141,10 @@ export function BandejaPedidosPage() {
             </table>
           </div>
         )
+      )}
+
+      {tab === 'tablero' && (
+        <p className="text-sm text-gray-500">Volumen total pendiente por producto, sumando pedidos sueltos y campañas propias todavía sin cerrar.</p>
       )}
 
       {tab === 'tablero' && (

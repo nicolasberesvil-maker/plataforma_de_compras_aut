@@ -3,6 +3,9 @@ import { z } from 'zod';
 const FORMAS_PAGO = ['TRANSFERENCIA', 'ECHEQ_CORRIENTE', 'ECHEQ_PLAZO', 'TARJETA_AGRO', 'CANJE_CEREAL', 'CUENTA_CORRIENTE', 'EFECTIVO'];
 
 export const crearPagoSchema = z.object({
+  // Solo lo usa el ADMIN al cargar un pago en nombre de un productor; el
+  // PRODUCTOR siempre declara sobre su propia cuenta (se ignora si lo manda).
+  productorId: z.number().int().positive().optional(),
   fecha: z.coerce.date().optional(),
   observaciones: z.string().max(1000).optional(),
   aplicaciones: z.array(z.object({

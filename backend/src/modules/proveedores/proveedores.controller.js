@@ -1,3 +1,5 @@
+import { prisma } from '../../config/database.js';
+import { ForbiddenError } from '../../utils/errors.js';
 import * as proveedoresService from './proveedores.service.js';
 import { obtenerCuentaCorriente, registrarPago } from './proveedores.cuenta-corriente.js';
 
@@ -51,6 +53,17 @@ export async function cuentaCorriente(req, res, next) {
     const id = Number(req.params.id);
     await proveedoresService.obtenerPorId(id, req.usuario);
     const cuentaCorriente = await obtenerCuentaCorriente(id);
+    res.json(cuentaCorriente);
+  } catch (err) { next(err); }
+}
+
+/** "Mi cuenta" del portal proveedor: cuenta corriente propia (solo lectura). */
+export async function miCuenta(req, res, next) {
+  try {
+    const proveedor = await prisma.proveedor.findUnique({ where: { usuarioId: req.usuario.id } });
+    if (!proveedor) throw new ForbiddenError('Usuario no es proveedor');
+
+    const cuentaCorriente = await obtenerCuentaCorriente(proveedor.id);
     res.json(cuentaCorriente);
   } catch (err) { next(err); }
 }

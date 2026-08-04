@@ -18,13 +18,20 @@ function sumar(items, campo) {
   return items.reduce((acc, i) => acc + Number(i[campo]), 0);
 }
 
+async function obtenerProductorParaAdmin(productorId) {
+  if (!productorId) throw new ValidationError('Indicá a qué productor corresponde el pago');
+  return prisma.productor.findUnique({ where: { id: productorId } });
+}
+
 /**
  * El productor declara el pago aplicándolo a 1+ órdenes propias, compuesto
  * por 1+ medios de pago. Queda DECLARADO: no toca OrdenCompra.estadoPago
  * todavía (eso pasa recién al confirmar).
  */
-export async function crear(datos, usuarioId) {
-  const productor = await prisma.productor.findUnique({ where: { usuarioId } });
+export async function crear(datos, usuario) {
+  const productor = usuario.rol === 'ADMIN'
+    ? await obtenerProductorParaAdmin(datos.productorId)
+    : await prisma.productor.findUnique({ where: { usuarioId: usuario.id } });
   if (!productor) throw new ForbiddenError('Usuario no es productor');
 
   const montoAplicaciones = sumar(datos.aplicaciones, 'montoAplicado');
@@ -58,7 +65,7 @@ export async function crear(datos, usuarioId) {
       fecha: datos.fecha ?? new Date(),
       montoTotal: montoAplicaciones,
       observaciones: datos.observaciones,
-      registradoPorId: usuarioId,
+      registradoPorId: usuario.id,
       aplicaciones: {
         create: datos.aplicaciones.map((a) => ({ ordenCompraId: a.ordenCompraId, montoAplicado: a.montoAplicado }))
       },

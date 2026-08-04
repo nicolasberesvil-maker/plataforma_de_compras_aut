@@ -26,7 +26,7 @@ export function EntregaDetailPage() {
   if (!entrega) return null;
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 p-4">
+    <div className="space-y-4 max-w-3xl">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">Detalle de entrega</h2>
         <Link to={volverA} className="text-sm text-aut-verde font-medium">

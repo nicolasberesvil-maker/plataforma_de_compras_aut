@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { productosApi } from '../../productos/api/productos.api';
 import { campanasApi } from '../../campanas/api/campanas.api';
 import { PedidoForm } from '../components/PedidoForm';
+import { BackButton } from '../../../components/BackButton';
 
 // Regla de negocio "brutalmente simple" (00-VISION-NEGOCIO.md): el productor
 // no debería tener que entender la diferencia entre "intención" y "solicitud".
@@ -26,10 +27,11 @@ export function PedirProductoPage() {
   });
 
   const campanaAbierta = campanasData?.data?.[0];
+  const producto = productosData?.data.find((p) => p.id === Number(productoId));
 
   if (pedidoEnviado) {
     return (
-      <div className="max-w-lg mx-auto p-4 space-y-4 text-center">
+      <div className="max-w-3xl space-y-4 text-center">
         <p className="text-2xl">✅</p>
         <h2 className="text-lg font-bold">¡Listo! Recibimos tu pedido</h2>
         <p className="text-sm text-gray-600">AUT lo va a revisar para armar una compra colectiva.</p>
@@ -41,7 +43,8 @@ export function PedirProductoPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 p-4">
+    <div className="max-w-3xl space-y-4">
+      <BackButton to="/productor" />
       <h2 className="text-lg font-bold">¿Qué producto necesitás?</h2>
 
       <select
@@ -68,7 +71,7 @@ export function PedirProductoPage() {
       )}
 
       {productoId && !buscandoCampana && !campanaAbierta && (
-        <PedidoForm productoId={Number(productoId)} onGuardado={() => setPedidoEnviado(true)} />
+        <PedidoForm productoId={Number(productoId)} unidadMedida={producto?.unidadMedida} onGuardado={() => setPedidoEnviado(true)} />
       )}
     </div>
   );

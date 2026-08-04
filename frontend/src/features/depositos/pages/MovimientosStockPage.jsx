@@ -31,7 +31,10 @@ export function MovimientosStockPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold">Historial de movimientos de stock</h2>
+      <div>
+        <h2 className="text-lg font-bold">Historial de movimientos de stock</h2>
+        <p className="text-sm text-gray-500">Solo lectura. Para registrar un ingreso, ajuste o transferencia, entrá al depósito desde la pestaña &quot;Depósitos&quot;.</p>
+      </div>
 
       <select
         value={depositoId}
@@ -54,7 +57,8 @@ export function MovimientosStockPage() {
                 <th className="py-2 px-3">Producto</th>
                 <th className="py-2 px-3">Tipo</th>
                 <th className="py-2 px-3 text-right">Cantidad</th>
-                <th className="py-2 px-3">Orden de compra</th>
+                <th className="py-2 px-3">Remito / Orden</th>
+                <th className="py-2 px-3">Comprador</th>
                 <th className="py-2 px-3">Ejecutado por</th>
               </tr>
             </thead>
@@ -69,14 +73,15 @@ export function MovimientosStockPage() {
                     {m.signo > 0 ? '+' : '-'}{Number(m.cantidad).toLocaleString('es-AR')}
                   </td>
                   <td className="py-2 px-3 text-sm text-gray-600">
-                    {m.entrega?.ordenCompraId ? `Orden #${m.entrega.ordenCompraId}` : '—'}
+                    {m.entrega?.ordenCompraId ? `Orden #${m.entrega.ordenCompraId}` : m.numeroRemito || '—'}
                   </td>
+                  <td className="py-2 px-3 text-sm text-gray-600">{m.productor?.razonSocial || '—'}</td>
                   <td className="py-2 px-3 text-sm">{m.ejecutadoPor.nombre} {m.ejecutadoPor.apellido}</td>
                 </tr>
               ))}
               {data?.data.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-4 px-3 text-sm text-gray-500 text-center">Sin movimientos</td>
+                  <td colSpan={8} className="py-4 px-3 text-sm text-gray-500 text-center">Sin movimientos</td>
                 </tr>
               )}
             </tbody>

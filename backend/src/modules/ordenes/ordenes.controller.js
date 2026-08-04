@@ -7,6 +7,13 @@ export async function listarMias(req, res, next) {
   } catch (err) { next(err); }
 }
 
+export async function listarMiasProveedor(req, res, next) {
+  try {
+    const ordenes = await ordenesService.listarMiasProveedor(req.usuario.id);
+    res.json({ ordenes });
+  } catch (err) { next(err); }
+}
+
 export async function listar(req, res, next) {
   try {
     const resultado = await ordenesService.listar(req.query);

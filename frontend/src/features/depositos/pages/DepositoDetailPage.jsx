@@ -4,13 +4,15 @@ import { useQuery } from '@tanstack/react-query';
 import { depositosApi } from '../api/depositos.api';
 import { StockTable } from '../components/StockTable';
 import { RegistrarIngresoForm } from '../components/RegistrarIngresoForm';
+import { RegistrarEgresoForm } from '../components/RegistrarEgresoForm';
 import { RegistrarAjusteForm } from '../components/RegistrarAjusteForm';
 import { RegistrarTransferenciaForm } from '../components/RegistrarTransferenciaForm';
 
 const ACCIONES = [
-  { id: 'ingreso', label: 'Ingreso' },
-  { id: 'ajuste', label: 'Ajuste' },
-  { id: 'transferencia', label: 'Transferencia' }
+  { id: 'ingreso', label: 'Ingreso', ayuda: 'Suma stock que entra al depósito. Cargá el número de remito si lo tenés, para poder rastrearlo después.' },
+  { id: 'egreso', label: 'Egreso', ayuda: 'Descuenta stock que sale hacia un comprador, por fuera del retiro formal de una orden (por ejemplo una entrega ya acordada de otra forma).' },
+  { id: 'ajuste', label: 'Ajuste', ayuda: 'Corrige el stock cargado por un conteo físico, rotura o pérdida.' },
+  { id: 'transferencia', label: 'Transferencia', ayuda: 'Mueve stock de este depósito a otro.' }
 ];
 
 export function DepositoDetailPage() {
@@ -61,7 +63,10 @@ export function DepositoDetailPage() {
             ))}
           </div>
 
+          <p className="text-xs text-gray-500 mb-3">{ACCIONES.find((a) => a.id === accion)?.ayuda}</p>
+
           {accion === 'ingreso' && <RegistrarIngresoForm depositoId={depositoId} />}
+          {accion === 'egreso' && <RegistrarEgresoForm depositoId={depositoId} />}
           {accion === 'ajuste' && <RegistrarAjusteForm depositoId={depositoId} />}
           {accion === 'transferencia' && <RegistrarTransferenciaForm depositoId={depositoId} />}
         </div>

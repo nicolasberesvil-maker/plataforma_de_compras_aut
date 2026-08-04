@@ -8,5 +8,6 @@ export const proveedoresApi = {
   aprobar: (id) => apiClient.patch(`/proveedores/${id}/aprobar`).then((r) => r.data),
   suspender: (id) => apiClient.patch(`/proveedores/${id}/suspender`).then((r) => r.data),
   cuentaCorriente: (id) => apiClient.get(`/proveedores/${id}/cuenta-corriente`).then((r) => r.data),
+  miCuenta: () => apiClient.get('/proveedores/mi-cuenta').then((r) => r.data),
   registrarPago: (id, datos) => apiClient.post(`/proveedores/${id}/pagos`, datos).then((r) => r.data)
 };

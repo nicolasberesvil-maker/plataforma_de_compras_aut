@@ -10,6 +10,7 @@ import { ProgresoVolumen } from '../components/ProgresoVolumen';
 import { AccionesCampana } from '../components/AccionesCampana';
 import { OrdenesTab } from '../components/OrdenesTab';
 import { RemitosTab } from '../components/RemitosTab';
+import { BackButton } from '../../../components/BackButton';
 
 const TABS = [
   { id: 'ordenes', label: 'Órdenes de compra' },
@@ -69,6 +70,7 @@ export function CampanaDetailPage() {
 
   return (
     <div className="max-w-2xl space-y-4">
+      <BackButton to="/admin/campanas" />
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">

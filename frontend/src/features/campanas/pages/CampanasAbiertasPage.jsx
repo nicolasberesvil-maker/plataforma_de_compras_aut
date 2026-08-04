@@ -9,7 +9,7 @@ export function CampanasAbiertasPage() {
   });
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 p-4">
+    <div className="space-y-4">
       <h2 className="text-lg font-bold">Compras abiertas</h2>
 
       {isLoading ? (

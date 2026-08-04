@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { campanasApi } from '../api/campanas.api';
 import { productosApi } from '../../productos/api/productos.api';
+import { BackButton } from '../../../components/BackButton';
 
 const TIPOS = ['COLECTIVA', 'DIRECTA', 'CONTINUA'];
 
@@ -93,6 +94,7 @@ export function CampanaFormPage() {
 
   return (
     <div className="max-w-lg space-y-4">
+      <BackButton to="/admin/campanas" />
       <h2 className="text-lg font-bold">{esEdicion ? 'Editar compra' : 'Nueva compra'}</h2>
 
       <form onSubmit={handleSubmit((datos) => guardar.mutate(datos))} className="bg-white border rounded-lg p-4 space-y-3">

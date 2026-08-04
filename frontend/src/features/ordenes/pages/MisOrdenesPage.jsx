@@ -9,8 +9,11 @@ export function MisOrdenesPage() {
   });
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 p-4">
-      <h2 className="text-lg font-bold">Mis órdenes</h2>
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-bold">Mis órdenes</h2>
+        <p className="text-sm text-gray-500">Tus compras ya confirmadas: precio, proveedor y cantidad definitivos.</p>
+      </div>
 
       {isLoading ? (
         <p className="text-gray-500 text-sm">Cargando...</p>

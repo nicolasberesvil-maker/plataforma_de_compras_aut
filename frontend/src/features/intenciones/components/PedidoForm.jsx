@@ -22,7 +22,7 @@ const schemaBase = {
   modalidadEntregaPreferida: z.enum(['RETIRO_EN_DEPOSITO', 'ENTREGA_EN_CAMPO']).optional(),
   // Preferencia de depósito se agrega en Fase 8 (recién ahí existe el modelo Deposito).
   direccionEntregaCampo: z.string().optional(),
-  formaPagoPreferida: z.string().optional()
+  formasPagoPreferidas: z.array(z.string()).optional()
 };
 
 // Dentro de una campaña, fecha/modalidad son opcionales (la campaña ya da
@@ -35,7 +35,7 @@ const schemaSuelto = z.object({
   modalidadEntregaPreferida: z.enum(['RETIRO_EN_DEPOSITO', 'ENTREGA_EN_CAMPO'], { required_error: 'Elegí cómo preferís recibirlo' })
 });
 
-export function PedidoForm({ campana, productoId, pedidoExistente, onGuardado }) {
+export function PedidoForm({ campana, productoId, unidadMedida, pedidoExistente, onGuardado }) {
   const queryClient = useQueryClient();
   const esSuelto = !campana;
   // Dentro de una campaña, lo único obligatorio es la cantidad (regla D.1):
@@ -53,16 +53,17 @@ export function PedidoForm({ campana, productoId, pedidoExistente, onGuardado })
           fechaDeseada: pedidoExistente.fechaDeseada?.slice(0, 10) || '',
           modalidadEntregaPreferida: pedidoExistente.modalidadEntregaPreferida || 'RETIRO_EN_DEPOSITO',
           direccionEntregaCampo: pedidoExistente.direccionEntregaCampo || '',
-          formaPagoPreferida: pedidoExistente.formaPagoPreferida || ''
+          formasPagoPreferidas: pedidoExistente.formasPagoPreferidas || []
         }
       : { modalidadEntregaPreferida: 'RETIRO_EN_DEPOSITO' }
   });
 
   const modalidad = watch('modalidadEntregaPreferida');
+  const unidad = campana?.producto?.unidadMedida || unidadMedida;
 
   const mutation = useMutation({
     mutationFn: (datos) => {
-      const payload = { ...datos, formaPagoPreferida: datos.formaPagoPreferida || undefined };
+      const payload = { ...datos, formasPagoPreferidas: datos.formasPagoPreferidas?.length ? datos.formasPagoPreferidas : undefined };
       return pedidoExistente
         ? intencionesApi.actualizar(pedidoExistente.id, payload)
         : intencionesApi.crear({ ...payload, campanaId: campana?.id, productoId: esSuelto ? productoId : undefined });
@@ -78,7 +79,7 @@ export function PedidoForm({ campana, productoId, pedidoExistente, onGuardado })
     <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-5 p-4">
       <div>
         <label className="block text-base font-medium mb-2">
-          ¿Cuánto necesitás?{campana?.producto?.unidadMedida ? ` (${campana.producto.unidadMedida.toLowerCase()})` : ''}
+          ¿Cuánto necesitás?{unidad ? ` (${unidad.toLowerCase()})` : ''}
         </label>
         <input
           {...register('volumen')}
@@ -136,11 +137,15 @@ export function PedidoForm({ campana, productoId, pedidoExistente, onGuardado })
           </div>
 
           <div>
-            <label className="block text-base font-medium mb-2">¿Cómo preferís pagar? (opcional)</label>
-            <select {...register('formaPagoPreferida')} className="w-full px-4 py-3 border-2 rounded-lg text-base">
-              <option value="">Sin preferencia</option>
-              {FORMAS_PAGO.map(([valor, label]) => <option key={valor} value={valor}>{label}</option>)}
-            </select>
+            <label className="block text-base font-medium mb-2">¿Cómo preferís pagar? (opcional, podés elegir más de uno)</label>
+            <div className="grid grid-cols-2 gap-2">
+              {FORMAS_PAGO.map(([valor, label]) => (
+                <label key={valor} className="flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer has-[:checked]:border-aut-verde has-[:checked]:bg-green-50 text-sm">
+                  <input {...register('formasPagoPreferidas')} type="checkbox" value={valor} />
+                  {label}
+                </label>
+              ))}
+            </div>
           </div>
 
           <div>

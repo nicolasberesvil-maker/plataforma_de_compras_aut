@@ -32,7 +32,7 @@ export function MiCuentaPage() {
   const ordenesPendientes = data.porOrden.filter((o) => o.montoPendiente > 0);
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 p-4">
+    <div className="space-y-4 max-w-3xl">
       <h2 className="text-lg font-bold">Mi cuenta</h2>
 
       <div className="grid grid-cols-2 gap-3">

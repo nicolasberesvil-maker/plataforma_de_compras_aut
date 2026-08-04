@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { pagosApi } from '../api/pagos.api';
+import { productoresApi } from '../../usuarios/api/productores.api';
 import { EstadoPagoBadge } from '../components/EstadoPagoBadge';
+import { DeclararPagoForm } from '../components/DeclararPagoForm';
 
 function formatearMoneda(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n);
@@ -9,6 +11,8 @@ function formatearMoneda(n) {
 
 export function PagosAdminPage() {
   const [estado, setEstado] = useState('DECLARADO');
+  const [mostrarForm, setMostrarForm] = useState(false);
+  const [productorId, setProductorId] = useState('');
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -16,7 +20,28 @@ export function PagosAdminPage() {
     queryFn: () => pagosApi.listar({ estado: estado || undefined })
   });
 
+  const { data: productoresData } = useQuery({
+    queryKey: ['productores', 'activos-para-pago'],
+    queryFn: () => productoresApi.listar({ limit: 200 }),
+    enabled: mostrarForm
+  });
+
+  const { data: cuentaData, isFetching: cargandoCuenta } = useQuery({
+    queryKey: ['productores', productorId, 'cuenta-corriente'],
+    queryFn: () => productoresApi.cuentaCorriente(productorId),
+    enabled: !!productorId
+  });
+
   const invalidar = () => queryClient.invalidateQueries({ queryKey: ['pagos'] });
+
+  const cargarPago = useMutation({
+    mutationFn: (datos) => pagosApi.crear({ ...datos, productorId: Number(productorId) }),
+    onSuccess: () => {
+      invalidar();
+      setMostrarForm(false);
+      setProductorId('');
+    }
+  });
 
   const confirmar = useMutation({
     mutationFn: (id) => pagosApi.confirmar(id),
@@ -39,13 +64,48 @@ export function PagosAdminPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-lg font-bold">Pagos</h2>
-        <select value={estado} onChange={(e) => setEstado(e.target.value)} className="border rounded-lg px-3 py-2 text-sm">
-          <option value="">Todos los estados</option>
-          <option value="DECLARADO">Declarados</option>
-          <option value="CONFIRMADO">Confirmados</option>
-          <option value="RECHAZADO">Rechazados</option>
-        </select>
+        <div className="flex items-center gap-3">
+          <select value={estado} onChange={(e) => setEstado(e.target.value)} className="border rounded-lg px-3 py-2 text-sm">
+            <option value="">Todos los estados</option>
+            <option value="DECLARADO">Declarados</option>
+            <option value="CONFIRMADO">Confirmados</option>
+            <option value="RECHAZADO">Rechazados</option>
+          </select>
+          <button
+            onClick={() => setMostrarForm((v) => !v)}
+            className="bg-aut-verde text-white px-3 py-2 rounded-lg text-sm font-medium"
+          >
+            {mostrarForm ? 'Cancelar' : '+ Cargar pago'}
+          </button>
+        </div>
       </div>
+
+      {mostrarForm && (
+        <div className="bg-white border rounded-lg p-4 space-y-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">Productor</label>
+            <select
+              value={productorId}
+              onChange={(e) => setProductorId(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Elegí un productor</option>
+              {productoresData?.data.map((p) => <option key={p.id} value={p.id}>{p.razonSocial}</option>)}
+            </select>
+          </div>
+
+          {productorId && cargandoCuenta && <p className="text-sm text-gray-500">Cargando cuenta corriente...</p>}
+
+          {productorId && cuentaData && (
+            <DeclararPagoForm
+              ordenes={cuentaData.porOrden.filter((o) => o.montoPendiente > 0)}
+              isLoading={cargarPago.isPending}
+              error={cargarPago.isError && (cargarPago.error.response?.data?.error?.message || 'Error al cargar el pago')}
+              onSubmit={(datos) => cargarPago.mutate(datos)}
+            />
+          )}
+        </div>
+      )}
 
       {isLoading ? (
         <p className="text-gray-500 text-sm">Cargando...</p>

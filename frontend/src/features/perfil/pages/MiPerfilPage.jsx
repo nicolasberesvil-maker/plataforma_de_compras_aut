@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { usuariosApi } from '../../usuarios/api/usuarios.api';
 import { useAuthStore } from '../../../store/authStore';
+import { BackButton } from '../../../components/BackButton';
 
 const datosSchema = z.object({
   nombre: z.string().min(2, 'Requerido'),
@@ -50,7 +51,8 @@ export function MiPerfilPage() {
   if (isLoading || !usuario) return <p className="p-4 text-gray-500 text-sm">Cargando...</p>;
 
   return (
-    <div className="max-w-lg mx-auto p-4 space-y-6">
+    <div className="space-y-6 max-w-3xl">
+      <BackButton />
       <h2 className="text-lg font-bold">Mi perfil</h2>
 
       <form

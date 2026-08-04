@@ -18,6 +18,18 @@ export async function listarMias(usuarioId) {
   });
 }
 
+/** Historial de ventas del proveedor: órdenes generadas a partir de sus cotizaciones ganadoras. */
+export async function listarMiasProveedor(usuarioId) {
+  const proveedor = await prisma.proveedor.findUnique({ where: { usuarioId } });
+  if (!proveedor) throw new ForbiddenError('Usuario no es proveedor');
+
+  return prisma.ordenCompra.findMany({
+    where: { adjudicacion: { cotizacionGanadora: { proveedorId: proveedor.id } } },
+    include: INCLUDE_DETALLE,
+    orderBy: { createdAt: 'desc' }
+  });
+}
+
 export async function listar({ estadoPago, campanaId, page = 1, limit = 20 }) {
   const where = {};
   if (estadoPago) where.estadoPago = estadoPago;
@@ -38,12 +50,20 @@ export async function listar({ estadoPago, campanaId, page = 1, limit = 20 }) {
 }
 
 export async function obtenerPorId(id, usuario) {
-  const orden = await prisma.ordenCompra.findUnique({ where: { id }, include: INCLUDE_DETALLE });
+  const orden = await prisma.ordenCompra.findUnique({
+    where: { id },
+    include: { ...INCLUDE_DETALLE, adjudicacion: { include: { campana: { include: { producto: true } }, cotizacionGanadora: true } } }
+  });
   if (!orden) throw new NotFoundError('Orden');
 
   if (usuario.rol === 'PRODUCTOR') {
     const productor = await prisma.productor.findUnique({ where: { usuarioId: usuario.id } });
     if (!productor || orden.productorId !== productor.id) throw new ForbiddenError();
+  }
+
+  if (usuario.rol === 'PROVEEDOR') {
+    const proveedor = await prisma.proveedor.findUnique({ where: { usuarioId: usuario.id } });
+    if (!proveedor || orden.adjudicacion.cotizacionGanadora.proveedorId !== proveedor.id) throw new ForbiddenError();
   }
 
   return orden;

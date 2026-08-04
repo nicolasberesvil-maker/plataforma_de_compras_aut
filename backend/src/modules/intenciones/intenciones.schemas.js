@@ -13,7 +13,7 @@ const camposComunes = {
   modalidadEntregaPreferida: z.enum(MODALIDAD_ENTREGA).optional(),
   // depositoPreferidoId se agrega en Fase 8 (recién ahí existe el modelo Deposito).
   direccionEntregaCampo: z.string().min(5).optional(),
-  formaPagoPreferida: z.enum(FORMA_PAGO).optional()
+  formasPagoPreferidas: z.array(z.enum(FORMA_PAGO)).optional()
 };
 
 // Un solo endpoint para los dos caminos de la regla D.1: si viene campanaId es

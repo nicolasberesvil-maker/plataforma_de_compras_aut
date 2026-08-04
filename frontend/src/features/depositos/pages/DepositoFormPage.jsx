@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { depositosApi } from '../api/depositos.api';
+import { BackButton } from '../../../components/BackButton';
 
 const schema = z.object({
   nombre: z.string().min(2, 'Requerido'),
@@ -56,6 +57,7 @@ export function DepositoFormPage() {
 
   return (
     <div className="max-w-lg space-y-4">
+      <BackButton to="/admin/stock" />
       <h2 className="text-lg font-bold">{esEdicion ? 'Editar depósito' : 'Nuevo depósito'}</h2>
 
       <form onSubmit={handleSubmit((datos) => guardar.mutate(datos))} className="bg-white border rounded-lg p-4 space-y-3">

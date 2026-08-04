@@ -70,10 +70,11 @@ model Productor {
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  intenciones IntencionCompra[]
-  ordenes     OrdenCompra[]
-  entregas    Entrega[]
-  pagos       Pago[]
+  intenciones      IntencionCompra[]
+  ordenes          OrdenCompra[]
+  entregas         Entrega[]
+  pagos            Pago[]
+  movimientosStock StockMovimiento[]
 
   @@map("productores")
 }
@@ -335,7 +336,7 @@ model IntencionCompra {
   // La FK a Deposito (para RETIRO_EN_DEPOSITO) se agrega en la migración de
   // Fase 8, cuando ese modelo exista.
   direccionEntregaCampo     String?           @map("direccion_entrega_campo") @db.Text
-  formaPagoPreferida        FormaPago?        @map("forma_pago_preferida")
+  formasPagoPreferidas      Json?             @map("formas_pago_preferidas")
 
   estado         EstadoIntencion @default(PENDIENTE)
   motivoDescarte String?         @map("motivo_descarte") @db.Text
@@ -652,7 +653,12 @@ model StockMovimiento {
   entrega   Entrega? @relation(fields: [entregaId], references: [id])
 
   proveedorOrigen String? @map("proveedor_origen")
+  numeroRemito    String? @map("numero_remito")
   observaciones   String? @db.Text
+
+  // Comprador destino de un egreso manual (fuera del flujo formal de Entrega).
+  productorId Int?       @map("productor_id")
+  productor   Productor? @relation(fields: [productorId], references: [id])
 
   ejecutadoPorId Int     @map("ejecutado_por_id")
   ejecutadoPor   Usuario @relation(fields: [ejecutadoPorId], references: [id])

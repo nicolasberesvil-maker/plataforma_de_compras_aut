@@ -16,6 +16,30 @@ export async function registrarIngreso(datos, usuarioId) {
       cantidad: datos.cantidad,
       signo: 1,
       proveedorOrigen: datos.proveedorOrigen,
+      numeroRemito: datos.numeroRemito,
+      observaciones: datos.observaciones,
+      ejecutadoPorId: usuarioId
+    }
+  });
+}
+
+/**
+ * Egreso manual a un productor, fuera del flujo formal de Entrega (por
+ * ejemplo, mercadería que se le entregó por su cuenta sin pasar por una
+ * OrdenCompra). No valida stock disponible, igual que ajustes y
+ * transferencias (regla ya existente en este módulo).
+ */
+export async function registrarEgresoManual(datos, usuarioId) {
+  if (datos.cantidad <= 0) throw new ValidationError('Cantidad debe ser positiva');
+
+  return prisma.stockMovimiento.create({
+    data: {
+      depositoId: datos.depositoId,
+      productoId: datos.productoId,
+      productorId: datos.productorId,
+      tipo: 'EGRESO_PRODUCTOR',
+      cantidad: datos.cantidad,
+      signo: -1,
       observaciones: datos.observaciones,
       ejecutadoPorId: usuarioId
     }
@@ -125,7 +149,8 @@ export async function listarMovimientos({ depositoId, productoId, desde, hasta, 
         deposito: { select: { nombre: true, localidad: true } },
         producto: { select: { nombre: true, unidadMedida: true } },
         ejecutadoPor: { select: { nombre: true, apellido: true } },
-        entrega: { select: { ordenCompraId: true } }
+        entrega: { select: { ordenCompraId: true } },
+        productor: { select: { razonSocial: true } }
       },
       take: limit,
       skip: (page - 1) * limit,

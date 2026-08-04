@@ -24,6 +24,8 @@ import { CotizacionDetailPage } from './features/cotizaciones/pages/CotizacionDe
 import { MisCotizacionesPage } from './features/cotizaciones/pages/MisCotizacionesPage';
 import { ComparadorPage } from './features/adjudicaciones/pages/ComparadorPage';
 import { MisOrdenesPage } from './features/ordenes/pages/MisOrdenesPage';
+import { MisVentasPage } from './features/ordenes/pages/MisVentasPage';
+import { MiCuentaProveedorPage } from './features/usuarios/pages/MiCuentaProveedorPage';
 import { DepositosListPage } from './features/depositos/pages/DepositosListPage';
 import { DepositoFormPage } from './features/depositos/pages/DepositoFormPage';
 import { DepositoDetailPage } from './features/depositos/pages/DepositoDetailPage';
@@ -142,6 +144,8 @@ export default function App() {
             <Route path="campanas/:id/cotizar" element={<CotizacionFormPage />} />
             <Route path="cotizaciones/:id" element={<CotizacionDetailPage />} />
             <Route path="mis-cotizaciones" element={<MisCotizacionesPage />} />
+            <Route path="mis-ventas" element={<MisVentasPage />} />
+            <Route path="mi-cuenta" element={<MiCuentaProveedorPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

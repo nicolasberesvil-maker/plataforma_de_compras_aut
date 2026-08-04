@@ -5,6 +5,15 @@ export const ingresoSchema = z.object({
   productoId: z.number().int().positive(),
   cantidad: z.number().positive(),
   proveedorOrigen: z.string().optional(),
+  numeroRemito: z.string().optional(),
+  observaciones: z.string().optional()
+});
+
+export const egresoSchema = z.object({
+  depositoId: z.number().int().positive(),
+  productoId: z.number().int().positive(),
+  productorId: z.number().int().positive(),
+  cantidad: z.number().positive(),
   observaciones: z.string().optional()
 });
 

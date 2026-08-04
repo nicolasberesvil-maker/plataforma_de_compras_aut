@@ -9,6 +9,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/mias', requireRole(['PRODUCTOR']), ctrl.listarMias);
+router.get('/mias-proveedor', requireRole(['PROVEEDOR']), ctrl.listarMiasProveedor);
 router.get('/', requireRole(['ADMIN']), validate(filtrosOrdenSchema, 'query'), ctrl.listar);
 router.get('/:id', ctrl.obtenerPorId);
 

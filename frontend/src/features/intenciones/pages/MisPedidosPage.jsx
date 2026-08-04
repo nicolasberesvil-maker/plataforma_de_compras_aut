@@ -10,10 +10,15 @@ export function MisPedidosPage() {
   });
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 p-4">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">Mis pedidos</h2>
-        <Link to="/productor/pedir" className="bg-aut-verde text-white px-4 py-2 rounded-lg text-sm font-medium">
+        <div>
+          <h2 className="text-lg font-bold">Mis pedidos</h2>
+          <p className="text-sm text-gray-500">
+            Lo que fuiste pidiendo, todavía sin convertirse en una compra confirmada. AUT los junta con los de otros productores para negociar mejor precio.
+          </p>
+        </div>
+        <Link to="/productor/pedir" className="bg-aut-verde text-white px-4 py-2 rounded-lg text-sm font-medium shrink-0">
           Pedir un producto
         </Link>
       </div>

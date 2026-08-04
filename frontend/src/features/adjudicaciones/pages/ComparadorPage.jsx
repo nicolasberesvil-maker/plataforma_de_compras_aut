@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adjudicacionesApi } from '../api/adjudicaciones.api';
 import { ConfirmarAdjudicacionModal } from '../components/ConfirmarAdjudicacionModal';
+import { BackButton } from '../../../components/BackButton';
 
 const MODALIDAD_LABEL = {
   RETIRO_EN_DEPOSITO: 'Retira en depósito',
@@ -34,6 +35,7 @@ export function ComparadorPage() {
 
   return (
     <div className="max-w-3xl space-y-4">
+      <BackButton to={`/admin/campanas/${campanaId}`} />
       <div>
         <h2 className="text-lg font-bold">{data.campana.nombre}</h2>
         <p className="text-sm text-gray-600">{data.campana.producto?.nombre}</p>

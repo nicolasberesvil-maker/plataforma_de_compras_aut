@@ -21,7 +21,7 @@ export function FacturaDetailPage() {
   if (!factura) return null;
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 p-4">
+    <div className="space-y-4 max-w-3xl">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">Factura {factura.numero}</h2>
         <Link to={esProductor ? '/productor/mis-facturas' : '/admin/facturas'} className="text-sm text-aut-verde font-medium">

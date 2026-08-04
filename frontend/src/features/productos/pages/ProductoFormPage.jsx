@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { productosApi } from '../api/productos.api';
+import { BackButton } from '../../../components/BackButton';
 
 const CATEGORIAS = ['AGROQUIMICO', 'FERTILIZANTE', 'SEMILLA', 'INOCULANTE', 'NUTRICION_ANIMAL', 'SANIDAD_ANIMAL', 'OTRO'];
 const UNIDADES = ['LITRO', 'KILO', 'UNIDAD', 'TONELADA', 'BOLSA'];
@@ -64,6 +65,7 @@ export function ProductoFormPage() {
 
   return (
     <div className="max-w-lg space-y-4">
+      <BackButton to="/admin/productos" />
       <h2 className="text-lg font-bold">{esEdicion ? 'Editar producto' : 'Nuevo producto'}</h2>
 
       <form onSubmit={handleSubmit((datos) => guardar.mutate(datos))} className="bg-white border rounded-lg p-4 space-y-3">

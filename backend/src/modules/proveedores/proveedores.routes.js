@@ -12,6 +12,7 @@ router.use(authenticate);
 
 router.get('/', requireRole(['ADMIN']), validate(listarProveedoresSchema, 'query'), proveedoresController.listar);
 router.post('/', requireRole(['ADMIN']), validate(crearProveedorSchema), proveedoresController.crear);
+router.get('/mi-cuenta', requireRole(['PROVEEDOR']), proveedoresController.miCuenta);
 router.get('/:id', requireRole(['ADMIN', 'PROVEEDOR']), proveedoresController.obtenerPorId);
 router.get('/:id/cuenta-corriente', requireRole(['ADMIN', 'PROVEEDOR']), proveedoresController.cuentaCorriente);
 router.post('/:id/pagos', requireRole(['ADMIN']), validate(registrarPagoProveedorSchema), proveedoresController.crearPago);

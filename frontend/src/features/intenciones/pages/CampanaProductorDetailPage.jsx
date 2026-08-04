@@ -5,6 +5,7 @@ import { useSocket } from '../../../hooks/useSocket';
 import { campanasApi } from '../../campanas/api/campanas.api';
 import { ProgresoVolumen } from '../../campanas/components/ProgresoVolumen';
 import { PedidoForm } from '../components/PedidoForm';
+import { BackButton } from '../../../components/BackButton';
 
 export function CampanaProductorDetailPage() {
   const { id } = useParams();
@@ -54,7 +55,8 @@ export function CampanaProductorDetailPage() {
   const tieneVolumenMinimo = campana.volumenMinimo && Number(campana.volumenMinimo) > 0;
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 p-4">
+    <div className="space-y-4 max-w-3xl">
+      <BackButton to="/productor" />
       <div>
         <h2 className="text-lg font-bold">{campana.nombre}</h2>
         <p className="text-sm text-gray-600">{campana.producto?.nombre}</p>

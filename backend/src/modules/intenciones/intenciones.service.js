@@ -93,7 +93,7 @@ export async function crear(datos, usuarioId) {
       fechaDeseada: datos.fechaDeseada,
       modalidadEntregaPreferida: datos.modalidadEntregaPreferida,
       direccionEntregaCampo: datos.direccionEntregaCampo,
-      formaPagoPreferida: datos.formaPagoPreferida
+      formasPagoPreferidas: datos.formasPagoPreferidas
     },
     include: { campana: { include: { producto: true } } }
   });
@@ -123,7 +123,7 @@ async function crearSuelta(datos, productor) {
       fechaDeseada: datos.fechaDeseada,
       modalidadEntregaPreferida: datos.modalidadEntregaPreferida,
       direccionEntregaCampo: datos.direccionEntregaCampo,
-      formaPagoPreferida: datos.formaPagoPreferida
+      formasPagoPreferidas: datos.formasPagoPreferidas
     },
     include: { producto: true }
   });
@@ -164,7 +164,7 @@ export async function actualizar(id, datos, usuarioId) {
       fechaDeseada: datos.fechaDeseada,
       modalidadEntregaPreferida: datos.modalidadEntregaPreferida,
       direccionEntregaCampo: datos.direccionEntregaCampo,
-      formaPagoPreferida: datos.formaPagoPreferida
+      formasPagoPreferidas: datos.formasPagoPreferidas
     },
     include: { campana: { include: { producto: true } }, producto: true }
   });

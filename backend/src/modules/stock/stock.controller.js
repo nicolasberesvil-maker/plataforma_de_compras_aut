@@ -7,6 +7,13 @@ export async function registrarIngreso(req, res, next) {
   } catch (err) { next(err); }
 }
 
+export async function registrarEgresoManual(req, res, next) {
+  try {
+    const movimiento = await stockService.registrarEgresoManual(req.body, req.usuario.id);
+    res.status(201).json({ movimiento });
+  } catch (err) { next(err); }
+}
+
 export async function registrarAjuste(req, res, next) {
   try {
     const movimiento = await stockService.registrarAjuste(req.body, req.usuario.id);

@@ -20,8 +20,11 @@ export function DepositosListPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">Depósitos</h2>
-        <Link to="/admin/depositos/nuevo" className="bg-aut-verde text-white px-4 py-2 rounded-lg text-sm font-medium">
+        <div>
+          <h2 className="text-lg font-bold">Depósitos</h2>
+          <p className="text-sm text-gray-500">Entrá a un depósito para ver su stock y registrar ingresos, ajustes o transferencias.</p>
+        </div>
+        <Link to="/admin/depositos/nuevo" className="bg-aut-verde text-white px-4 py-2 rounded-lg text-sm font-medium shrink-0">
           Nuevo depósito
         </Link>
       </div>
@@ -67,6 +70,9 @@ export function DepositosListPage() {
                   <td className="py-2 px-3 text-sm">{deposito.direccion}</td>
                   <td className="py-2 px-3 text-sm">{deposito.responsable || '—'}</td>
                   <td className="py-2 px-3 text-sm text-right space-x-3 whitespace-nowrap">
+                    <Link to={`/admin/depositos/${deposito.id}`} className="text-aut-verde font-medium">
+                      Registrar movimiento
+                    </Link>
                     <Link to={`/admin/depositos/${deposito.id}/editar`} className="text-aut-verde font-medium">
                       Editar
                     </Link>

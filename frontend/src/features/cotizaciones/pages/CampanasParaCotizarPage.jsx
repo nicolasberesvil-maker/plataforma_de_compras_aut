@@ -9,7 +9,7 @@ export function CampanasParaCotizarPage() {
   });
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 p-4">
+    <div className="space-y-4">
       <h2 className="text-lg font-bold">Licitaciones abiertas</h2>
 
       {isLoading ? (

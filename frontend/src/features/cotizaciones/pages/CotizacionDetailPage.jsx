@@ -21,7 +21,7 @@ export function CotizacionDetailPage() {
   if (!cotizacion) return <p className="p-4 text-gray-500 text-sm">No encontrada.</p>;
 
   return (
-    <div className="max-w-lg mx-auto p-4 space-y-4">
+    <div className="space-y-4 max-w-3xl">
       <div>
         <h2 className="text-lg font-bold">{cotizacion.campana.nombre}</h2>
         <p className="text-sm text-gray-600">{cotizacion.campana.producto.nombre}</p>

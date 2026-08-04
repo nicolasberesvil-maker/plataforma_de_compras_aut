@@ -6,7 +6,7 @@ const ESTADO_PAGO_STYLES = {
   CANCELADO: 'bg-gray-100 text-gray-600'
 };
 
-export function OrdenCard({ orden }) {
+export function OrdenCard({ orden, mostrarProductor = false }) {
   const campana = orden.adjudicacion?.campana;
   const porcentajeAhorro = orden.porcentajeAhorro ? Number(orden.porcentajeAhorro) : null;
 
@@ -16,6 +16,9 @@ export function OrdenCard({ orden }) {
         <div>
           <p className="font-medium">{campana?.producto?.nombre}</p>
           <p className="text-sm text-gray-600">{campana?.nombre}</p>
+          {mostrarProductor && orden.productor && (
+            <p className="text-xs text-gray-500">Comprador: {orden.productor.razonSocial}</p>
+          )}
         </div>
         <span className={`text-xs font-medium px-2 py-1 rounded-full ${ESTADO_PAGO_STYLES[orden.estadoPago] ?? ''}`}>
           {orden.estadoPago}
@@ -29,7 +32,7 @@ export function OrdenCard({ orden }) {
         {orden.entrega && <div><span className="text-gray-500">Entrega: </span>{orden.entrega.estado}</div>}
       </div>
 
-      {porcentajeAhorro != null && (
+      {!mostrarProductor && porcentajeAhorro != null && (
         <p className="text-sm text-aut-verde font-medium">
           Ahorraste un {porcentajeAhorro.toFixed(1)}% comprando en grupo
         </p>

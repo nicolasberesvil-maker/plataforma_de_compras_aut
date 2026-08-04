@@ -9,8 +9,11 @@ export function MisEntregasPage() {
   });
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 p-4">
-      <h2 className="text-lg font-bold">Mis entregas</h2>
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-bold">Mis entregas</h2>
+        <p className="text-sm text-gray-500">Cuándo y dónde vas a recibir cada orden: retiro en depósito de AUT o entrega en tu campo.</p>
+      </div>
 
       {isLoading ? (
         <p className="text-gray-500 text-sm">Cargando...</p>

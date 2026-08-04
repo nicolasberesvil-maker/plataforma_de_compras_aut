@@ -12,7 +12,7 @@ router.get('/mios', requireRole(['PRODUCTOR']), ctrl.listarMios);
 router.get('/', requireRole(['ADMIN']), validate(filtrosPagoSchema, 'query'), ctrl.listar);
 router.get('/:id', ctrl.obtenerPorId);
 
-router.post('/', requireRole(['PRODUCTOR']), validate(crearPagoSchema), ctrl.crear);
+router.post('/', requireRole(['PRODUCTOR', 'ADMIN']), validate(crearPagoSchema), ctrl.crear);
 router.patch('/:id/confirmar', requireRole(['ADMIN']), ctrl.confirmar);
 router.patch('/:id/rechazar', requireRole(['ADMIN']), validate(rechazarPagoSchema), ctrl.rechazar);
 
