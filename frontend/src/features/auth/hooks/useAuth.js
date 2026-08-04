@@ -8,7 +8,7 @@ export function useLogin() {
   const navigate = useNavigate();
 
   return useMutation({
-    mutationFn: ({ email, password }) => authApi.login(email, password),
+    mutationFn: ({ username, password }) => authApi.login(username, password),
     onSuccess: (data) => {
       setAuth(data.accessToken, data.usuario);
       const ruta = data.usuario.rol === 'PRODUCTOR' ? '/productor'
@@ -29,12 +29,6 @@ export function useLogout() {
       logout();
       navigate('/login');
     }
-  });
-}
-
-export function useRegister() {
-  return useMutation({
-    mutationFn: (datos) => authApi.register(datos)
   });
 }
 

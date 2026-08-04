@@ -33,9 +33,9 @@ export async function obtenerKpis(filtros = {}) {
     prisma.adjudicacion.aggregate({ where: filtroFecha('adjudicadaAt', filtros), _sum: { ahorroEstimadoTotal: true } }),
     prisma.ordenCompra.aggregate({ where: filtroFecha('createdAt', filtros), _sum: { volumenFinal: true, total: true } }),
     prisma.productor.count({
-      where: { aprobado: true, usuario: { activo: true, ultimoLoginAt: { gte: haceNDias(DIAS_ACTIVIDAD_PRODUCTOR) } } }
+      where: { usuario: { activo: true, ultimoLoginAt: { gte: haceNDias(DIAS_ACTIVIDAD_PRODUCTOR) } } }
     }),
-    prisma.productor.count({ where: { aprobado: true } })
+    prisma.productor.count()
   ]);
 
   return {

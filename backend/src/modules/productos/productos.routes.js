@@ -11,8 +11,8 @@ router.use(authenticate);
 router.get('/', validate(filtrosProductoSchema, 'query'), ctrl.listar);
 router.get('/:id', ctrl.obtenerPorId);
 
-router.post('/', requireRole(['ADMIN', 'CONTADOR']), validate(crearProductoSchema), ctrl.crear);
-router.patch('/:id', requireRole(['ADMIN', 'CONTADOR']), validate(actualizarProductoSchema), ctrl.actualizar);
-router.delete('/:id', requireRole(['ADMIN', 'CONTADOR']), ctrl.desactivar);
+router.post('/', requireRole(['ADMIN']), validate(crearProductoSchema), ctrl.crear);
+router.patch('/:id', requireRole(['ADMIN']), validate(actualizarProductoSchema), ctrl.actualizar);
+router.delete('/:id', requireRole(['ADMIN']), ctrl.desactivar);
 
 export default router;

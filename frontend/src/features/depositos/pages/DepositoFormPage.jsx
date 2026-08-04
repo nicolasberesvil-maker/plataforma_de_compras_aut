@@ -50,7 +50,7 @@ export function DepositoFormPage() {
     mutationFn: (datos) => (esEdicion ? depositosApi.actualizar(id, datos) : depositosApi.crear(datos)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['depositos'] });
-      navigate('/admin/depositos');
+      navigate('/admin/stock');
     }
   });
 
@@ -110,7 +110,7 @@ export function DepositoFormPage() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/admin/depositos')}
+            onClick={() => navigate('/admin/stock')}
             className="px-4 py-2 rounded-lg text-sm font-medium border"
           >
             Cancelar

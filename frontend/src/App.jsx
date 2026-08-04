@@ -1,12 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './features/auth/pages/LoginPage';
-import { RegisterPage } from './features/auth/pages/RegisterPage';
 import { ForgotPasswordPage } from './features/auth/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './features/auth/pages/ResetPasswordPage';
 import { UsuariosListPage } from './features/usuarios/pages/UsuariosListPage';
-import { ProductoresPendientesPage } from './features/usuarios/pages/ProductoresPendientesPage';
+import { ProductoresPage } from './features/usuarios/pages/ProductoresPage';
 import { ProveedoresPage } from './features/usuarios/pages/ProveedoresPage';
+import { ProveedorDetailPage } from './features/usuarios/pages/ProveedorDetailPage';
 import { MiPerfilPage } from './features/perfil/pages/MiPerfilPage';
 import { ProductosListPage } from './features/productos/pages/ProductosListPage';
 import { ProductoFormPage } from './features/productos/pages/ProductoFormPage';
@@ -20,6 +20,7 @@ import { CampanaProductorDetailPage } from './features/intenciones/pages/Campana
 import { BandejaPedidosPage } from './features/intenciones/pages/BandejaPedidosPage';
 import { CampanasParaCotizarPage } from './features/cotizaciones/pages/CampanasParaCotizarPage';
 import { CotizacionFormPage } from './features/cotizaciones/pages/CotizacionFormPage';
+import { CotizacionDetailPage } from './features/cotizaciones/pages/CotizacionDetailPage';
 import { MisCotizacionesPage } from './features/cotizaciones/pages/MisCotizacionesPage';
 import { ComparadorPage } from './features/adjudicaciones/pages/ComparadorPage';
 import { MisOrdenesPage } from './features/ordenes/pages/MisOrdenesPage';
@@ -27,12 +28,15 @@ import { DepositosListPage } from './features/depositos/pages/DepositosListPage'
 import { DepositoFormPage } from './features/depositos/pages/DepositoFormPage';
 import { DepositoDetailPage } from './features/depositos/pages/DepositoDetailPage';
 import { MovimientosStockPage } from './features/depositos/pages/MovimientosStockPage';
+import { StockPage } from './features/depositos/pages/StockPage';
 import { EntregasAdminPage } from './features/entregas/pages/EntregasAdminPage';
 import { EntregaDetailPage } from './features/entregas/pages/EntregaDetailPage';
 import { MisEntregasPage } from './features/entregas/pages/MisEntregasPage';
 import { FacturasAdminPage } from './features/facturas/pages/FacturasAdminPage';
 import { FacturaDetailPage } from './features/facturas/pages/FacturaDetailPage';
 import { MisFacturasPage } from './features/facturas/pages/MisFacturasPage';
+import { PagosAdminPage } from './features/pagos/pages/PagosAdminPage';
+import { MiCuentaPage } from './features/pagos/pages/MiCuentaPage';
 import { DashboardAdminPage } from './features/dashboard/pages/DashboardAdminPage';
 import { DashboardProductorPage } from './features/dashboard/pages/DashboardProductorPage';
 import { PanelAdminLayout } from './layouts/PanelAdminLayout';
@@ -40,6 +44,7 @@ import { PanelProductorLayout } from './layouts/PanelProductorLayout';
 import { PanelProveedorLayout } from './layouts/PanelProveedorLayout';
 import { PanelDepositoLayout } from './layouts/PanelDepositoLayout';
 import { ProtectedRoute } from './routes/ProtectedRoute';
+import { useAuthStore } from './store/authStore';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,15 +52,17 @@ const queryClient = new QueryClient({
   }
 });
 
-function HomePage() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-aut-verde">Plataforma de Compras AUT</h1>
-        <p className="mt-2 text-gray-600">Setup completo. Listo para Fase 1.</p>
-      </div>
-    </div>
-  );
+const RUTA_POR_ROL = {
+  ADMIN: '/admin',
+  PRODUCTOR: '/productor',
+  PROVEEDOR: '/proveedor',
+  OPERADOR_DEPOSITO: '/deposito'
+};
+
+function RaizRedirect() {
+  const { accessToken, usuario } = useAuthStore();
+  if (!accessToken || !usuario) return <Navigate to="/login" replace />;
+  return <Navigate to={RUTA_POR_ROL[usuario.rol] ?? '/login'} replace />;
 }
 
 export default function App() {
@@ -63,9 +70,8 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<RaizRedirect />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/registro" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
@@ -73,13 +79,14 @@ export default function App() {
 
           <Route
             path="/admin"
-            element={<ProtectedRoute roles={['ADMIN', 'CONTADOR']}><PanelAdminLayout /></ProtectedRoute>}
+            element={<ProtectedRoute roles={['ADMIN']}><PanelAdminLayout /></ProtectedRoute>}
           >
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<DashboardAdminPage />} />
             <Route path="usuarios" element={<UsuariosListPage />} />
-            <Route path="productores-pendientes" element={<ProductoresPendientesPage />} />
+            <Route path="productores" element={<ProductoresPage />} />
             <Route path="proveedores" element={<ProveedoresPage />} />
+            <Route path="proveedores/:id" element={<ProveedorDetailPage />} />
             <Route path="productos" element={<ProductosListPage />} />
             <Route path="productos/nuevo" element={<ProductoFormPage />} />
             <Route path="productos/:id/editar" element={<ProductoFormPage />} />
@@ -89,6 +96,7 @@ export default function App() {
             <Route path="campanas/:id/editar" element={<CampanaFormPage />} />
             <Route path="campanas/:id/comparador" element={<ComparadorPage />} />
             <Route path="solicitudes" element={<BandejaPedidosPage />} />
+            <Route path="stock" element={<StockPage />} />
             <Route path="depositos" element={<DepositosListPage />} />
             <Route path="depositos/nuevo" element={<DepositoFormPage />} />
             <Route path="depositos/:id" element={<DepositoDetailPage />} />
@@ -98,6 +106,7 @@ export default function App() {
             <Route path="entregas/:id" element={<EntregaDetailPage />} />
             <Route path="facturas" element={<FacturasAdminPage />} />
             <Route path="facturas/:id" element={<FacturaDetailPage />} />
+            <Route path="pagos" element={<PagosAdminPage />} />
           </Route>
 
           <Route
@@ -113,6 +122,7 @@ export default function App() {
             <Route path="entregas/:id" element={<EntregaDetailPage />} />
             <Route path="mis-facturas" element={<MisFacturasPage />} />
             <Route path="facturas/:id" element={<FacturaDetailPage />} />
+            <Route path="mi-cuenta" element={<MiCuentaPage />} />
             <Route path="campanas/:id" element={<CampanaProductorDetailPage />} />
           </Route>
 
@@ -130,6 +140,7 @@ export default function App() {
           >
             <Route index element={<CampanasParaCotizarPage />} />
             <Route path="campanas/:id/cotizar" element={<CotizacionFormPage />} />
+            <Route path="cotizaciones/:id" element={<CotizacionDetailPage />} />
             <Route path="mis-cotizaciones" element={<MisCotizacionesPage />} />
           </Route>
         </Routes>

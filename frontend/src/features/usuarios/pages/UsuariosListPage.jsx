@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { usuariosApi } from '../api/usuarios.api';
 import { UsuarioRow } from '../components/UsuarioRow';
 
-const ROLES = ['PRODUCTOR', 'PROVEEDOR', 'ADMIN', 'OPERADOR', 'CONTADOR', 'OPERADOR_DEPOSITO'];
+const ROLES = ['PRODUCTOR', 'PROVEEDOR', 'ADMIN', 'OPERADOR_DEPOSITO'];
 
 export function UsuariosListPage() {
   const [rol, setRol] = useState('');
@@ -50,6 +50,7 @@ export function UsuariosListPage() {
             <thead>
               <tr className="border-b text-left text-xs text-gray-500 uppercase">
                 <th className="py-2 px-3">Nombre</th>
+                <th className="py-2 px-3">Usuario</th>
                 <th className="py-2 px-3">Email</th>
                 <th className="py-2 px-3">Rol</th>
                 <th className="py-2 px-3">Estado</th>

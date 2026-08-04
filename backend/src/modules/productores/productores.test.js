@@ -18,15 +18,16 @@ async function crearAdmin(email) {
   emailsCreados.push(email);
   const passwordHash = await bcrypt.hash('clave12345', 4);
   return prisma.usuario.create({
-    data: { email, passwordHash, rol: 'ADMIN', activo: true, nombre: 'Admin', apellido: 'AUT' }
+    data: { email, username: email.split('@')[0], passwordHash, rol: 'ADMIN', activo: true, nombre: 'Admin', apellido: 'AUT' }
   });
 }
 
-async function crearProductorPendiente(email) {
+/** Crea un productor ya activo, como hace el ADMIN vía POST /api/productores. */
+async function crearProductorActivo(email) {
   emailsCreados.push(email);
   const passwordHash = await bcrypt.hash('clave12345', 4);
   const usuario = await prisma.usuario.create({
-    data: { email, passwordHash, rol: 'PRODUCTOR', activo: false, nombre: 'Juan', apellido: 'Perez' }
+    data: { email, username: email.split('@')[0], passwordHash, rol: 'PRODUCTOR', activo: true, nombre: 'Juan', apellido: 'Perez' }
   });
   const productor = await prisma.productor.create({
     data: {
@@ -35,15 +36,14 @@ async function crearProductorPendiente(email) {
       cuit: nuevoCuit(),
       condicionFiscal: 'MONOTRIBUTISTA',
       domicilioFiscal: 'Ruta 1 km 5',
-      localidad: 'Franck',
-      aprobado: false
+      localidad: 'Franck'
     }
   });
   return { usuario, productor };
 }
 
-async function login(email) {
-  const res = await request(app).post('/api/auth/login').send({ email, password: 'clave12345' });
+async function login(username) {
+  const res = await request(app).post('/api/auth/login').send({ username, password: 'clave12345' });
   return res.body.accessToken;
 }
 
@@ -66,58 +66,48 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-describe('GET /api/productores/pendientes', () => {
-  it('un ADMIN ve la lista de productores pendientes de aprobación', async () => {
-    const emailAdmin = `pend-admin-${run}@test.com`;
+describe('POST /api/productores', () => {
+  it('el ADMIN da de alta un productor, que queda activo de inmediato', async () => {
+    const emailAdmin = `alta-admin-${run}@test.com`;
     await crearAdmin(emailAdmin);
-    const { usuario } = await crearProductorPendiente(`pend-prod-${run}@test.com`);
-    const token = await login(emailAdmin);
-
-    const res = await request(app).get('/api/productores/pendientes').set('Authorization', `Bearer ${token}`);
-
-    expect(res.status).toBe(200);
-    expect(res.body.data.some((p) => p.usuarioId === usuario.id)).toBe(true);
-  });
-});
-
-describe('PATCH /api/productores/:id/aprobar', () => {
-  it('aprueba al productor y activa su usuario', async () => {
-    const emailAdmin = `aprobar-admin-${run}@test.com`;
-    await crearAdmin(emailAdmin);
-    const { usuario, productor } = await crearProductorPendiente(`aprobar-prod-${run}@test.com`);
-    const token = await login(emailAdmin);
+    const token = await login(emailAdmin.split('@')[0]);
 
     const res = await request(app)
-      .patch(`/api/productores/${productor.id}/aprobar`)
-      .set('Authorization', `Bearer ${token}`);
+      .post('/api/productores')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        username: `alta-prod-${run}`,
+        password: 'clave12345',
+        email: `alta-prod-${run}@test.com`,
+        nombre: 'Juan',
+        apellido: 'Perez',
+        razonSocial: 'Campo Perez SRL',
+        cuit: nuevoCuit(),
+        condicionFiscal: 'MONOTRIBUTISTA',
+        domicilioFiscal: 'Ruta 1 km 5',
+        localidad: 'Franck'
+      });
+    emailsCreados.push(`alta-prod-${run}@test.com`);
 
-    expect(res.status).toBe(200);
-    expect(res.body.productor.aprobado).toBe(true);
+    expect(res.status).toBe(201);
+    expect(res.body.usuario.username).toBe(`alta-prod-${run}`);
 
-    const usuarioActualizado = await prisma.usuario.findUnique({ where: { id: usuario.id } });
-    expect(usuarioActualizado.activo).toBe(true);
+    const loginNuevo = await login(`alta-prod-${run}`);
+    expect(loginNuevo).toBeDefined();
   });
 
-  it('rechaza aprobar dos veces con 409', async () => {
-    const emailAdmin = `doble-admin-${run}@test.com`;
-    await crearAdmin(emailAdmin);
-    const { productor } = await crearProductorPendiente(`doble-prod-${run}@test.com`);
-    const token = await login(emailAdmin);
-
-    await request(app).patch(`/api/productores/${productor.id}/aprobar`).set('Authorization', `Bearer ${token}`);
-    const res = await request(app).patch(`/api/productores/${productor.id}/aprobar`).set('Authorization', `Bearer ${token}`);
-
-    expect(res.status).toBe(409);
-  });
-
-  it('un PRODUCTOR no puede aprobar', async () => {
-    const { usuario, productor } = await crearProductorPendiente(`noadmin-prod-${run}@test.com`);
-    await prisma.usuario.update({ where: { id: usuario.id }, data: { activo: true } });
-    const token = await login(usuario.email);
+  it('un PRODUCTOR no puede dar de alta productores', async () => {
+    const { usuario } = await crearProductorActivo(`noadmin-prod-${run}@test.com`);
+    const token = await login(usuario.username);
 
     const res = await request(app)
-      .patch(`/api/productores/${productor.id}/aprobar`)
-      .set('Authorization', `Bearer ${token}`);
+      .post('/api/productores')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        username: `otro-${run}`, password: 'clave12345', email: `otro-${run}@test.com`,
+        nombre: 'X', apellido: 'Y', razonSocial: 'Z', cuit: nuevoCuit(),
+        condicionFiscal: 'MONOTRIBUTISTA', domicilioFiscal: 'Ruta 1', localidad: 'Franck'
+      });
 
     expect(res.status).toBe(403);
   });
@@ -141,9 +131,10 @@ describe('GET /api/productores/:id/cuenta-corriente', () => {
     await prisma.intencionCompra.create({ data: { campanaId, productorId: productor.id, productoId: producto.id, volumen: 50 } });
     await request(app).post(`/api/campanas/${campanaId}/cerrar-intenciones`).set('Authorization', `Bearer ${adminToken}`).send({});
 
+    const emailProveedor = `proveedor-ctacte-${sufijo}-${run}@test.com`;
     const usuarioProveedor = await prisma.usuario.create({
       data: {
-        email: `proveedor-ctacte-${sufijo}-${run}@test.com`, passwordHash: await bcrypt.hash('clave12345', 4),
+        email: emailProveedor, username: emailProveedor.split('@')[0], passwordHash: await bcrypt.hash('clave12345', 4),
         rol: 'PROVEEDOR', activo: true, nombre: 'Prov', apellido: 'Test'
       }
     });
@@ -171,10 +162,8 @@ describe('GET /api/productores/:id/cuenta-corriente', () => {
   it('el ADMIN ve el resumen consolidado de compras del productor', async () => {
     const emailAdmin = `ctacte-admin-${run}@test.com`;
     await crearAdmin(emailAdmin);
-    const adminToken = await login(emailAdmin);
-    const { usuario, productor } = await crearProductorPendiente(`ctacte-prod-${run}@test.com`);
-    await prisma.usuario.update({ where: { id: usuario.id }, data: { activo: true } });
-    await prisma.productor.update({ where: { id: productor.id }, data: { aprobado: true } });
+    const adminToken = await login(emailAdmin.split('@')[0]);
+    const { productor } = await crearProductorActivo(`ctacte-prod-${run}@test.com`);
 
     await crearOrdenParaProductor('resumen', productor, adminToken);
 
@@ -189,11 +178,9 @@ describe('GET /api/productores/:id/cuenta-corriente', () => {
   });
 
   it('un productor no puede ver la cuenta corriente de otro productor (403)', async () => {
-    const { usuario: usuarioDueno, productor: dueno } = await crearProductorPendiente(`ctacte-dueno-${run}@test.com`);
-    await prisma.usuario.update({ where: { id: usuarioDueno.id }, data: { activo: true } });
-    const { usuario: usuarioOtro } = await crearProductorPendiente(`ctacte-otro-${run}@test.com`);
-    await prisma.usuario.update({ where: { id: usuarioOtro.id }, data: { activo: true } });
-    const tokenOtro = await login(usuarioOtro.email);
+    const { productor: dueno } = await crearProductorActivo(`ctacte-dueno-${run}@test.com`);
+    const { usuario: usuarioOtro } = await crearProductorActivo(`ctacte-otro-${run}@test.com`);
+    const tokenOtro = await login(usuarioOtro.username);
 
     const res = await request(app)
       .get(`/api/productores/${dueno.id}/cuenta-corriente`)

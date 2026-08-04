@@ -60,7 +60,7 @@ export function CampanaProductorDetailPage() {
         <p className="text-sm text-gray-600">{campana.producto?.nombre}</p>
       </div>
 
-      {tieneVolumenMinimo && resumen && (
+      {tieneVolumenMinimo && resumen ? (
         <div className="bg-white border rounded-lg p-4">
           <ProgresoVolumen
             acumulado={resumen.volumenAcumulado}
@@ -69,13 +69,30 @@ export function CampanaProductorDetailPage() {
           />
           <p className="text-xs text-gray-500 mt-2">{resumen.cantidadProductores} productores se sumaron</p>
         </div>
+      ) : resumen && (
+        <div className="bg-white border rounded-lg p-4 text-sm">
+          <p>
+            <span className="text-gray-500">Pedido por el grupo: </span>
+            {resumen.volumenAcumulado.toLocaleString('es-AR')} {campana.producto?.unidadMedida}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">{resumen.cantidadProductores} productores se sumaron</p>
+        </div>
       )}
 
-      {campana.fechaCierre && (
-        <p className="text-sm text-gray-600">
-          Cierra: {new Date(campana.fechaCierre).toLocaleString('es-AR')}
-        </p>
-      )}
+      <div className="bg-white border rounded-lg p-4 space-y-1 text-sm">
+        {campana.fechaCierre && (
+          <p><span className="text-gray-500">Cierra: </span>{new Date(campana.fechaCierre).toLocaleString('es-AR')}</p>
+        )}
+        {resumen?.fechaEstimadaRecepcion && (
+          <p><span className="text-gray-500">Recepción estimada: </span>{new Date(resumen.fechaEstimadaRecepcion).toLocaleDateString('es-AR')}</p>
+        )}
+        {resumen?.condicionesPagoGanadora && (
+          <p><span className="text-gray-500">Forma de pago: </span>{resumen.condicionesPagoGanadora}</p>
+        )}
+        {resumen?.plazoEntregaDiasGanador != null && (
+          <p><span className="text-gray-500">Plazo de entrega: </span>{resumen.plazoEntregaDiasGanador} días</p>
+        )}
+      </div>
 
       <div className="bg-white border rounded-lg">
         <h3 className="text-sm font-medium p-4 pb-0">

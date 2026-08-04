@@ -8,5 +8,6 @@ export const intencionesApi = {
   actualizar: (id, datos) => apiClient.patch(`/intenciones/${id}`, datos).then((r) => r.data),
   eliminar: (id) => apiClient.delete(`/intenciones/${id}`).then((r) => r.data),
   descartar: (id, motivo) => apiClient.post(`/intenciones/${id}/descartar`, { motivo }).then((r) => r.data),
-  agrupar: (datos) => apiClient.post('/intenciones/agrupar', datos).then((r) => r.data)
+  agrupar: (datos) => apiClient.post('/intenciones/agrupar', datos).then((r) => r.data),
+  tablero: () => apiClient.get('/intenciones/tablero').then((r) => r.data)
 };

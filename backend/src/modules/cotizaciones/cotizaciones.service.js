@@ -69,6 +69,22 @@ export async function obtenerPorId(id, usuario) {
     if (cotizacion.proveedorId !== proveedor.id) throw new ForbiddenError();
   }
 
+  // Sobre cerrado (regla C.6): los destinos de entrega recién se muestran al
+  // proveedor cuando ganó — antes no debe saber quiénes son los productores.
+  if (cotizacion.esGanadora) {
+    const intenciones = await prisma.intencionCompra.findMany({
+      where: { campanaId: cotizacion.campanaId },
+      include: { productor: { select: { razonSocial: true, localidad: true } } }
+    });
+    cotizacion.destinos = intenciones.map((i) => ({
+      productor: i.productor.razonSocial,
+      volumen: Number(i.volumen),
+      modalidadEntregaPreferida: i.modalidadEntregaPreferida,
+      direccionEntregaCampo: i.direccionEntregaCampo,
+      localidad: i.productor.localidad
+    }));
+  }
+
   return cotizacion;
 }
 

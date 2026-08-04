@@ -12,7 +12,7 @@ export async function listar({ estado, tipo, productoId, page = 1, limit = 20 })
   const [data, total] = await Promise.all([
     prisma.campana.findMany({
       where,
-      include: { producto: true },
+      include: { producto: true, _count: { select: { cotizaciones: true } } },
       take: limit,
       skip: (page - 1) * limit,
       orderBy: { createdAt: 'desc' }
@@ -26,7 +26,11 @@ export async function listar({ estado, tipo, productoId, page = 1, limit = 20 })
 export async function obtenerPorId(id) {
   const campana = await prisma.campana.findUnique({
     where: { id },
-    include: { producto: true, creadaPor: { select: { nombre: true, apellido: true } } }
+    include: {
+      producto: true,
+      creadaPor: { select: { nombre: true, apellido: true } },
+      _count: { select: { cotizaciones: true } }
+    }
   });
   if (!campana) throw new NotFoundError('Campaña');
   return campana;
@@ -58,8 +62,22 @@ export async function obtenerResumen(id, usuario) {
     cantidadProductores: stats._count,
     fechaApertura: campana.fechaApertura,
     fechaCierre: campana.fechaCierre,
+    fechaEstimadaRecepcion: campana.fechaEstimadaRecepcion,
     horasLockoutEdicion: campana.horasLockoutEdicion
   };
+
+  // Forma de pago que definió el proveedor ganador: solo una vez adjudicada.
+  // No se expone identidad del proveedor (regla C.6, sobre cerrado).
+  if (['ADJUDICADA', 'CERRADA'].includes(campana.estado)) {
+    const adjudicacion = await prisma.adjudicacion.findUnique({
+      where: { campanaId: id },
+      include: { cotizacionGanadora: { select: { condicionesPago: true, plazoEntregaDias: true } } }
+    });
+    if (adjudicacion) {
+      resumen.condicionesPagoGanadora = adjudicacion.cotizacionGanadora.condicionesPago;
+      resumen.plazoEntregaDiasGanador = adjudicacion.cotizacionGanadora.plazoEntregaDias;
+    }
+  }
 
   if (usuario.rol === 'PRODUCTOR') {
     const productor = await prisma.productor.findUnique({ where: { usuarioId: usuario.id } });
@@ -261,6 +279,20 @@ export async function generarTanda(id, opciones, usuario) {
     eventBus.emit('TANDA_GENERADA', { padreId: padre.id, hijaId: hija.id, tipoTanda });
     return hija;
   });
+}
+
+/**
+ * Reenvío manual del aviso a productores (M3): útil si alguien no vio el
+ * aviso original de CAMPANA_ABIERTA o si se actualizó algo del pedido.
+ */
+export async function avisarProductores(id) {
+  const campana = await obtenerPorId(id);
+  if (campana.estado !== 'ABIERTA') {
+    throw new ConflictError('Solo se puede avisar a productores de una compra ABIERTA');
+  }
+
+  eventBus.emit('COMPRA_ACTUALIZADA', { campanaId: id, productoId: campana.productoId });
+  return campana;
 }
 
 export async function cancelar(id, motivo) {

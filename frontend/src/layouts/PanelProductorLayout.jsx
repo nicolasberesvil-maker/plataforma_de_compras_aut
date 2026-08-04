@@ -11,6 +11,7 @@ const TABS = [
   { to: '/productor/mis-ordenes', label: 'Mis órdenes', icon: '🧾' },
   { to: '/productor/mis-entregas', label: 'Mis entregas', icon: '📦' },
   { to: '/productor/mis-facturas', label: 'Mis facturas', icon: '💰' },
+  { to: '/productor/mi-cuenta', label: 'Mi cuenta', icon: '💳' },
   { to: '/perfil', label: 'Perfil', icon: '👤' }
 ];
 

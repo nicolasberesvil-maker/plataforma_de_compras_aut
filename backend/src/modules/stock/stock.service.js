@@ -124,7 +124,8 @@ export async function listarMovimientos({ depositoId, productoId, desde, hasta, 
       include: {
         deposito: { select: { nombre: true, localidad: true } },
         producto: { select: { nombre: true, unidadMedida: true } },
-        ejecutadoPor: { select: { nombre: true, apellido: true } }
+        ejecutadoPor: { select: { nombre: true, apellido: true } },
+        entrega: { select: { ordenCompraId: true } }
       },
       take: limit,
       skip: (page - 1) * limit,

@@ -4,11 +4,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adjudicacionesApi } from '../api/adjudicaciones.api';
 import { ConfirmarAdjudicacionModal } from '../components/ConfirmarAdjudicacionModal';
 
+const MODALIDAD_LABEL = {
+  RETIRO_EN_DEPOSITO: 'Retira en depósito',
+  ENTREGA_EN_CAMPO: 'Entrega en campo'
+};
+
 export function ComparadorPage() {
   const { id: campanaId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [seleccionada, setSeleccionada] = useState(null);
+  const [mostrarDestinos, setMostrarDestinos] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['adjudicaciones', 'comparador', campanaId],
@@ -36,6 +42,34 @@ export function ComparadorPage() {
       <div className="bg-blue-50 rounded-lg p-4 flex gap-6 text-sm">
         <p>Volumen consolidado: <strong>{data.campana.volumenConsolidado} {data.campana.producto?.unidadMedida}</strong></p>
         <p>Productores agrupados: <strong>{data.campana.cantidadProductores}</strong></p>
+      </div>
+
+      <div className="bg-white border rounded-lg p-4">
+        <button
+          onClick={() => setMostrarDestinos((v) => !v)}
+          className="text-sm font-medium text-aut-verde"
+        >
+          {mostrarDestinos ? '▾' : '▸'} Destinos de entrega ({data.destinos?.length ?? 0})
+        </button>
+        {mostrarDestinos && (
+          <div className="mt-3 space-y-2">
+            {!data.destinos?.length ? (
+              <p className="text-sm text-gray-500">Sin destinos cargados.</p>
+            ) : (
+              data.destinos.map((d, i) => (
+                <div key={i} className="border-b pb-2 last:border-0 last:pb-0 text-sm">
+                  <span className="font-medium">{d.productor}</span> — {d.volumen} {data.campana.producto?.unidadMedida?.toLowerCase()}
+                  <span className="text-gray-600">
+                    {' · '}
+                    {MODALIDAD_LABEL[d.modalidadEntregaPreferida] ?? 'Sin preferencia registrada'}
+                    {d.modalidadEntregaPreferida === 'ENTREGA_EN_CAMPO' && d.direccionEntregaCampo && ` (${d.direccionEntregaCampo})`}
+                    {d.localidad && ` — ${d.localidad}`}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {data.cotizaciones.length === 0 ? (

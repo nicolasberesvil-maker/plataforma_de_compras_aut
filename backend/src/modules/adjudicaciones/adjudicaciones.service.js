@@ -52,6 +52,18 @@ export async function obtenerComparador(campanaId) {
 
   const volumenConsolidado = Number(stats._sum.volumen ?? 0);
 
+  const intenciones = await prisma.intencionCompra.findMany({
+    where: { campanaId },
+    include: { productor: { select: { razonSocial: true, localidad: true } } }
+  });
+  const destinos = intenciones.map((i) => ({
+    productor: i.productor.razonSocial,
+    volumen: Number(i.volumen),
+    modalidadEntregaPreferida: i.modalidadEntregaPreferida,
+    direccionEntregaCampo: i.direccionEntregaCampo,
+    localidad: i.productor.localidad
+  }));
+
   return {
     campana: {
       id: campana.id,
@@ -60,6 +72,7 @@ export async function obtenerComparador(campanaId) {
       volumenConsolidado,
       cantidadProductores: stats._count
     },
+    destinos,
     cotizaciones: cotizaciones
       .map((c) => ({
         id: c.id,

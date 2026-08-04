@@ -1,7 +1,10 @@
 import { useState } from 'react';
 
 export function ConfirmarAdjudicacionModal({ cotizacion, campana, onCancelar, onConfirmar, pending }) {
-  const [precioMinoristaReferencia, setPrecioMinoristaReferencia] = useState('');
+  const costoReferencia = campana.producto?.costoReferencia;
+  const [precioMinoristaReferencia, setPrecioMinoristaReferencia] = useState(
+    costoReferencia != null ? String(costoReferencia) : ''
+  );
   const [motivoEleccion, setMotivoEleccion] = useState('');
 
   return (

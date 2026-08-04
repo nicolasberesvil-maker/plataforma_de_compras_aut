@@ -14,12 +14,12 @@ async function crearUsuario(email, rol) {
   emailsCreados.push(email);
   const passwordHash = await bcrypt.hash('clave12345', 4);
   return prisma.usuario.create({
-    data: { email, passwordHash, rol, activo: true, nombre: 'Test', apellido: 'User' }
+    data: { email, username: email.split('@')[0], passwordHash, rol, activo: true, nombre: 'Test', apellido: 'User' }
   });
 }
 
 async function login(email) {
-  const res = await request(app).post('/api/auth/login').send({ email, password: 'clave12345' });
+  const res = await request(app).post('/api/auth/login').send({ username: email.split('@')[0], password: 'clave12345' });
   return res.body.accessToken;
 }
 
@@ -38,8 +38,7 @@ async function crearProductor(sufijo, { conLogin = false } = {}) {
       cuit: siguienteCuit(),
       condicionFiscal: 'MONOTRIBUTISTA',
       domicilioFiscal: 'Ruta 1',
-      localidad: 'Franck',
-      aprobado: true
+      localidad: 'Franck'
     }
   });
   const token = conLogin ? await login(email) : null;

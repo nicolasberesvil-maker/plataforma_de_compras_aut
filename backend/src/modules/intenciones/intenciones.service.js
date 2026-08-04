@@ -55,7 +55,6 @@ export async function obtenerPorId(id, usuario) {
  */
 export async function crear(datos, usuarioId) {
   const productor = await obtenerProductorDelUsuario(usuarioId);
-  if (!productor.aprobado) throw new ForbiddenError('Productor no aprobado');
 
   if (!datos.campanaId) {
     return crearSuelta(datos, productor);
@@ -264,6 +263,53 @@ export async function agrupar(datos, usuario) {
   }
 
   return resultado.campana;
+}
+
+/**
+ * Tablero agregado por producto: para cada producto, cuánto suma entre
+ * pedidos sueltos PENDIENTES de agrupar y lo que ya está cargado en campañas
+ * propias todavía sin cerrar (BORRADOR/ABIERTA). Le da al ADMIN, en una sola
+ * pantalla, el volumen total antes de decidir armar una cotización.
+ */
+export async function obtenerTablero() {
+  const [sueltas, enCampanas] = await Promise.all([
+    prisma.intencionCompra.groupBy({
+      by: ['productoId'],
+      where: { campanaId: null, estado: 'PENDIENTE' },
+      _sum: { volumen: true },
+      _count: true
+    }),
+    prisma.intencionCompra.groupBy({
+      by: ['productoId'],
+      where: { campana: { estado: { in: ['BORRADOR', 'ABIERTA'] } } },
+      _sum: { volumen: true },
+      _count: true
+    })
+  ]);
+
+  const productoIds = [...new Set([...sueltas.map((s) => s.productoId), ...enCampanas.map((c) => c.productoId)])];
+  const productos = await prisma.producto.findMany({ where: { id: { in: productoIds } } });
+
+  return productoIds
+    .map((productoId) => {
+      const s = sueltas.find((x) => x.productoId === productoId);
+      const c = enCampanas.find((x) => x.productoId === productoId);
+      const producto = productos.find((p) => p.id === productoId);
+      const totalSueltoPendiente = Number(s?._sum.volumen ?? 0);
+      const totalEnCampanasPropias = Number(c?._sum.volumen ?? 0);
+
+      return {
+        productoId,
+        producto: producto?.nombre,
+        unidadMedida: producto?.unidadMedida,
+        totalSueltoPendiente,
+        cantidadPedidosSueltos: s?._count ?? 0,
+        totalEnCampanasPropias,
+        cantidadEnCampanasPropias: c?._count ?? 0,
+        totalGeneral: totalSueltoPendiente + totalEnCampanasPropias
+      };
+    })
+    .sort((a, b) => b.totalGeneral - a.totalGeneral);
 }
 
 // ============================================================

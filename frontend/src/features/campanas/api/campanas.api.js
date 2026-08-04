@@ -10,5 +10,6 @@ export const campanasApi = {
   cerrarIntenciones: (id) => apiClient.post(`/campanas/${id}/cerrar-intenciones`, {}).then((r) => r.data),
   adjudicarDirecta: (id, datos) => apiClient.post(`/campanas/${id}/adjudicar-directa`, datos).then((r) => r.data),
   generarTanda: (id, datos) => apiClient.post(`/campanas/${id}/generar-tanda`, datos).then((r) => r.data),
+  avisarProductores: (id) => apiClient.post(`/campanas/${id}/avisar-productores`).then((r) => r.data),
   cancelar: (id, motivo) => apiClient.post(`/campanas/${id}/cancelar`, { motivo }).then((r) => r.data)
 };

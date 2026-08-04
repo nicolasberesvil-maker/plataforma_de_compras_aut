@@ -5,6 +5,8 @@ import { z } from 'zod';
 const CONDICIONES_FISCALES = ['RESPONSABLE_INSCRIPTO', 'MONOTRIBUTISTA', 'EXENTO', 'CONSUMIDOR_FINAL'];
 
 const schema = z.object({
+  username: z.string().min(3, 'Mínimo 3 caracteres'),
+  password: z.string().min(8, 'Mínimo 8 caracteres'),
   email: z.string().email('Email inválido'),
   nombre: z.string().min(2, 'Requerido'),
   apellido: z.string().min(2, 'Requerido'),
@@ -26,6 +28,18 @@ export function NuevoProveedorForm({ onSubmit, isLoading, resultado }) {
       <h3 className="font-bold">Nuevo proveedor</h3>
 
       <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium mb-1">Usuario</label>
+          <input {...register('username')} className="w-full border rounded-lg px-3 py-2 text-sm" />
+          {errors.username && <p className="text-red-600 text-xs mt-1">{errors.username.message}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Contraseña</label>
+          <input {...register('password')} type="text" className="w-full border rounded-lg px-3 py-2 text-sm" />
+          {errors.password && <p className="text-red-600 text-xs mt-1">{errors.password.message}</p>}
+        </div>
+
         <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">Email</label>
           <input {...register('email')} className="w-full border rounded-lg px-3 py-2 text-sm" />
@@ -85,7 +99,8 @@ export function NuevoProveedorForm({ onSubmit, isLoading, resultado }) {
 
       {resultado && (
         <p className="text-sm text-aut-verde">
-          Proveedor creado. Password temporal: <code className="bg-gray-100 px-1 rounded">{resultado.passwordTemporal}</code>
+          Proveedor creado con usuario <code className="bg-gray-100 px-1 rounded">{resultado.usuario?.username}</code>.
+          Comunicale la contraseña por fuera del sistema.
         </p>
       )}
     </form>

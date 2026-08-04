@@ -48,7 +48,7 @@ export async function obtenerPorId(id, usuario) {
   if (usuario.rol === 'PRODUCTOR') {
     const productor = await prisma.productor.findUnique({ where: { usuarioId: usuario.id } });
     if (!productor || entrega.productorId !== productor.id) throw new ForbiddenError();
-  } else if (!['ADMIN', 'CONTADOR', 'OPERADOR_DEPOSITO'].includes(usuario.rol)) {
+  } else if (!['ADMIN', 'OPERADOR_DEPOSITO'].includes(usuario.rol)) {
     // Sin esto, cualquier rol autenticado (PROVEEDOR...) podía ver el detalle
     // de la entrega de cualquier productor (nombre, DNI de quien retiró,
     // depósito). El check de PRODUCTOR de arriba solo cubre ese rol.

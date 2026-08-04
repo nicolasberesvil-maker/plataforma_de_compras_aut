@@ -61,7 +61,9 @@ export async function obtenerStock(depositoId) {
       productoId: d.productoId,
       nombreProducto: producto?.nombre,
       unidadMedida: producto?.unidadMedida,
-      stockActual: Number(d.stock)
+      stockActual: Number(d.stock),
+      stockMinimo: producto?.stockMinimo != null ? Number(producto.stockMinimo) : null,
+      stockSeguridad: producto?.stockSeguridad != null ? Number(producto.stockSeguridad) : null
     };
   });
 }

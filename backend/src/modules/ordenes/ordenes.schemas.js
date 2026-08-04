@@ -7,6 +7,7 @@ export const definirFormaPagoSchema = z.object({
 
 export const filtrosOrdenSchema = z.object({
   estadoPago: z.enum(['PENDIENTE', 'PARCIAL', 'PAGADO', 'VENCIDO', 'CANCELADO']).optional(),
+  campanaId: z.coerce.number().int().positive().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20)
 });

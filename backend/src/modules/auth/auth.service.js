@@ -3,63 +3,24 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { prisma } from '../../config/database.js';
 import { env } from '../../config/env.js';
-import { UnauthorizedError, ConflictError, ValidationError } from '../../utils/errors.js';
+import { UnauthorizedError, ValidationError } from '../../utils/errors.js';
 import { parseDuracionMs } from '../../utils/duration.js';
 import { emailService } from '../../services/email.service.js';
 
 const BCRYPT_COST = 12;
 
 /**
- * Registra un productor nuevo. Queda inactivo hasta que AUT lo apruebe.
- * Crea Usuario + Productor en una transacción.
- */
-export async function register(datos) {
-  const existe = await prisma.usuario.findUnique({ where: { email: datos.email } });
-  if (existe) throw new ConflictError('Ya existe un usuario con ese email');
-
-  const passwordHash = await bcrypt.hash(datos.password, BCRYPT_COST);
-
-  return prisma.$transaction(async (tx) => {
-    const usuario = await tx.usuario.create({
-      data: {
-        email: datos.email,
-        passwordHash,
-        rol: 'PRODUCTOR',
-        activo: false, // queda inactivo hasta aprobación
-        nombre: datos.nombre,
-        apellido: datos.apellido,
-        telefono: datos.telefono
-      }
-    });
-
-    await tx.productor.create({
-      data: {
-        usuarioId: usuario.id,
-        razonSocial: datos.razonSocial,
-        cuit: datos.cuit,
-        condicionFiscal: datos.condicionFiscal,
-        domicilioFiscal: datos.domicilioFiscal,
-        localidad: datos.localidad,
-        aprobado: false
-      }
-    });
-
-    return { id: usuario.id, email: usuario.email };
-  });
-}
-
-/**
  * Login: valida credenciales, retorna access token + refresh token.
  */
-export async function login(email, password) {
-  const usuario = await prisma.usuario.findUnique({ where: { email } });
+export async function login(username, password) {
+  const usuario = await prisma.usuario.findUnique({ where: { username } });
   if (!usuario) throw new UnauthorizedError('Credenciales inválidas');
 
   const passwordOk = await bcrypt.compare(password, usuario.passwordHash);
   if (!passwordOk) throw new UnauthorizedError('Credenciales inválidas');
 
   if (!usuario.activo) {
-    throw new UnauthorizedError('Usuario inactivo. Esperá la aprobación de AUT.');
+    throw new UnauthorizedError('Usuario inactivo');
   }
 
   // Actualizar último login (no bloqueante)
@@ -76,6 +37,7 @@ export async function login(email, password) {
     refreshToken,
     usuario: {
       id: usuario.id,
+      username: usuario.username,
       email: usuario.email,
       nombre: usuario.nombre,
       apellido: usuario.apellido,

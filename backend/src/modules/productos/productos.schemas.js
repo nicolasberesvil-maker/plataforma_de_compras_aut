@@ -8,7 +8,10 @@ export const crearProductoSchema = z.object({
   descripcion: z.string().max(1000).optional(),
   categoria: z.enum(CATEGORIAS),
   unidadMedida: z.enum(UNIDADES),
-  alicuotaIva: z.number().positive().max(50)
+  alicuotaIva: z.number().positive().max(50),
+  costoReferencia: z.number().positive().optional().nullable(),
+  stockMinimo: z.number().nonnegative().optional().nullable(),
+  stockSeguridad: z.number().nonnegative().optional().nullable()
 });
 
 export const actualizarProductoSchema = crearProductoSchema.partial();

@@ -7,7 +7,7 @@ import { ingresoSchema, ajusteSchema, transferenciaSchema, filtrosMovimientoSche
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole(['ADMIN', 'CONTADOR']));
+router.use(requireRole(['ADMIN', 'OPERADOR_DEPOSITO']));
 
 router.get('/', validate(filtrosMovimientoSchema, 'query'), ctrl.listarMovimientos);
 router.post('/ingresos', validate(ingresoSchema), ctrl.registrarIngreso);

@@ -9,20 +9,10 @@ const COOKIE_OPTIONS = {
   maxAge: parseDuracionMs(env.JWT_REFRESH_EXPIRES_IN)
 };
 
-export async function register(req, res, next) {
-  try {
-    const usuario = await authService.register(req.body);
-    res.status(201).json({
-      message: 'Registro exitoso. AUT revisará tu solicitud y te notificará por email.',
-      usuario
-    });
-  } catch (err) { next(err); }
-}
-
 export async function login(req, res, next) {
   try {
-    const { email, password } = req.body;
-    const { accessToken, refreshToken, usuario } = await authService.login(email, password);
+    const { username, password } = req.body;
+    const { accessToken, refreshToken, usuario } = await authService.login(username, password);
 
     res.cookie('refreshToken', refreshToken, COOKIE_OPTIONS);
     res.json({ accessToken, usuario });

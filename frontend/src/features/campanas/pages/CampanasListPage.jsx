@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { campanasApi } from '../api/campanas.api';
 import { TipoBadge } from '../components/TipoBadge';
 import { EstadoBadge } from '../components/EstadoBadge';
+import { CotizacionEstadoBadge } from '../components/CotizacionEstadoBadge';
 
 const TIPOS = ['COLECTIVA', 'DIRECTA', 'CONTINUA'];
 const ESTADOS = ['BORRADOR', 'ABIERTA', 'EN_LICITACION', 'ADJUDICADA', 'CERRADA', 'CANCELADA'];
@@ -21,9 +22,9 @@ export function CampanasListPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">Campañas</h2>
+        <h2 className="text-lg font-bold">Compras</h2>
         <Link to="/admin/campanas/nueva" className="bg-aut-verde text-white px-4 py-2 rounded-lg text-sm font-medium">
-          Nueva campaña
+          Nueva compra
         </Link>
       </div>
 
@@ -59,7 +60,12 @@ export function CampanasListPage() {
                   <td className="py-2 px-3 text-sm">{campana.nombre}</td>
                   <td className="py-2 px-3 text-sm">{campana.producto?.nombre}</td>
                   <td className="py-2 px-3"><TipoBadge tipo={campana.tipo} /></td>
-                  <td className="py-2 px-3"><EstadoBadge estado={campana.estado} /></td>
+                  <td className="py-2 px-3">
+                    <div className="flex flex-col gap-1 items-start">
+                      <EstadoBadge estado={campana.estado} />
+                      <CotizacionEstadoBadge campana={campana} />
+                    </div>
+                  </td>
                   <td className="py-2 px-3 text-sm">
                     {campana.fechaCierre ? new Date(campana.fechaCierre).toLocaleDateString('es-AR') : '—'}
                   </td>
@@ -78,7 +84,7 @@ export function CampanasListPage() {
       {data?.pagination && (
         <div className="flex items-center justify-between text-sm text-gray-600">
           <span>
-            Página {data.pagination.page} de {data.pagination.totalPages} ({data.pagination.total} campañas)
+            Página {data.pagination.page} de {data.pagination.totalPages} ({data.pagination.total} compras)
           </span>
           <div className="flex gap-2">
             <button

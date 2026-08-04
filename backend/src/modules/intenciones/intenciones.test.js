@@ -22,16 +22,16 @@ async function crearUsuario(email, rol) {
   emailsCreados.push(email);
   const passwordHash = await bcrypt.hash('clave12345', 4);
   return prisma.usuario.create({
-    data: { email, passwordHash, rol, activo: true, nombre: 'Test', apellido: 'User' }
+    data: { email, username: email.split('@')[0], passwordHash, rol, activo: true, nombre: 'Test', apellido: 'User' }
   });
 }
 
 async function login(email) {
-  const res = await request(app).post('/api/auth/login').send({ email, password: 'clave12345' });
+  const res = await request(app).post('/api/auth/login').send({ username: email.split('@')[0], password: 'clave12345' });
   return res.body.accessToken;
 }
 
-async function crearProductor(sufijo, { aprobado = true } = {}) {
+async function crearProductor(sufijo) {
   const email = `productor-${sufijo}-${run}@test.com`;
   const usuario = await crearUsuario(email, 'PRODUCTOR');
   contadorCuit += 1;
@@ -42,8 +42,7 @@ async function crearProductor(sufijo, { aprobado = true } = {}) {
       cuit: `20${run}${String(contadorCuit).padStart(3, '0')}`,
       condicionFiscal: 'MONOTRIBUTISTA',
       domicilioFiscal: 'Ruta 1',
-      localidad: 'Franck',
-      aprobado
+      localidad: 'Franck'
     }
   });
   const token = await login(email);
@@ -95,12 +94,6 @@ describe('POST /api/intenciones — pedido suelto (bottom-up)', () => {
     expect(res.status).toBe(201);
     expect(res.body.intencion.estado).toBe('PENDIENTE');
     expect(res.body.intencion.campanaId).toBeNull();
-  });
-
-  it('productor no aprobado → 403', async () => {
-    const { token } = await crearProductor('no-aprobado', { aprobado: false });
-    const res = await crearPedido(token);
-    expect(res.status).toBe(403);
   });
 
   it('sin fechaDeseada/modalidad (pedido suelto) → 400', async () => {

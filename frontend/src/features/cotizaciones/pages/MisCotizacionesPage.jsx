@@ -21,10 +21,15 @@ export function MisCotizacionesPage() {
           {data.cotizaciones.map((cotizacion) => (
             <Link
               key={cotizacion.id}
-              to={`/proveedor/campanas/${cotizacion.campanaId}/cotizar`}
+              to={cotizacion.esGanadora ? `/proveedor/cotizaciones/${cotizacion.id}` : `/proveedor/campanas/${cotizacion.campanaId}/cotizar`}
               className="block bg-white border rounded-lg p-4 active:bg-gray-50"
             >
-              <p className="font-medium">{cotizacion.campana.producto.nombre}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-medium">{cotizacion.campana.producto.nombre}</p>
+                {cotizacion.esGanadora && (
+                  <span className="bg-emerald-100 text-emerald-800 text-xs font-medium px-2 py-0.5 rounded-full">Ganaste</span>
+                )}
+              </div>
               <p className="text-sm text-gray-600">{cotizacion.campana.nombre}</p>
               <p className="text-sm mt-1">
                 {cotizacion.monedaPrecio} {Number(cotizacion.precioUnitario)} · {cotizacion.plazoEntregaDias} días

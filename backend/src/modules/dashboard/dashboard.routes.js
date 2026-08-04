@@ -10,7 +10,7 @@ router.use(authenticate);
 
 router.get('/mi', requireRole(['PRODUCTOR']), ctrl.miDashboard);
 
-router.use(requireRole(['ADMIN', 'CONTADOR']));
+router.use(requireRole(['ADMIN']));
 router.get('/kpis', validate(filtrosFechaSchema, 'query'), ctrl.kpis);
 router.get('/volumen-por-insumo', validate(filtrosFechaSchema, 'query'), ctrl.volumenPorInsumo);
 router.get('/ranking-proveedores', validate(filtrosFechaSchema, 'query'), ctrl.rankingProveedores);

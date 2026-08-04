@@ -55,3 +55,10 @@ export async function agrupar(req, res, next) {
     res.status(201).json({ campana });
   } catch (err) { next(err); }
 }
+
+export async function tablero(req, res, next) {
+  try {
+    const data = await intencionesService.obtenerTablero();
+    res.json({ data });
+  } catch (err) { next(err); }
+}

@@ -9,12 +9,23 @@ import { productosApi } from '../api/productos.api';
 const CATEGORIAS = ['AGROQUIMICO', 'FERTILIZANTE', 'SEMILLA', 'INOCULANTE', 'NUTRICION_ANIMAL', 'SANIDAD_ANIMAL', 'OTRO'];
 const UNIDADES = ['LITRO', 'KILO', 'UNIDAD', 'TONELADA', 'BOLSA'];
 
+// Convierte '' (input vacío) a undefined ANTES de validar — si se hiciera con
+// z.coerce.number() directo, Number('') da 0, que pasa .nonnegative() y el
+// campo quedaría guardado como 0 en vez de quedar sin definir.
+const numeroOpcional = (validador) => z.preprocess(
+  (val) => (val === '' || val === undefined || val === null ? undefined : Number(val)),
+  validador.optional()
+);
+
 const schema = z.object({
   nombre: z.string().min(2, 'Requerido'),
   descripcion: z.string().optional(),
   categoria: z.enum(CATEGORIAS),
   unidadMedida: z.enum(UNIDADES),
-  alicuotaIva: z.coerce.number().positive('Debe ser mayor a 0').max(50)
+  alicuotaIva: z.coerce.number().positive('Debe ser mayor a 0').max(50),
+  costoReferencia: numeroOpcional(z.number().positive('Debe ser mayor a 0')),
+  stockMinimo: numeroOpcional(z.number().nonnegative('No puede ser negativo')),
+  stockSeguridad: numeroOpcional(z.number().nonnegative('No puede ser negativo'))
 });
 
 export function ProductoFormPage() {
@@ -33,8 +44,13 @@ export function ProductoFormPage() {
 
   useEffect(() => {
     if (data?.producto) {
-      const { nombre, descripcion, categoria, unidadMedida, alicuotaIva } = data.producto;
-      reset({ nombre, descripcion: descripcion ?? '', categoria, unidadMedida, alicuotaIva: Number(alicuotaIva) });
+      const { nombre, descripcion, categoria, unidadMedida, alicuotaIva, costoReferencia, stockMinimo, stockSeguridad } = data.producto;
+      reset({
+        nombre, descripcion: descripcion ?? '', categoria, unidadMedida, alicuotaIva: Number(alicuotaIva),
+        costoReferencia: costoReferencia != null ? Number(costoReferencia) : undefined,
+        stockMinimo: stockMinimo != null ? Number(stockMinimo) : undefined,
+        stockSeguridad: stockSeguridad != null ? Number(stockSeguridad) : undefined
+      });
     }
   }, [data, reset]);
 
@@ -82,6 +98,26 @@ export function ProductoFormPage() {
           <label className="block text-sm font-medium mb-1">Alícuota IVA (%)</label>
           <input type="number" step="0.1" {...register('alicuotaIva')} className="w-full border rounded-lg px-3 py-2 text-sm" />
           {errors.alicuotaIva && <p className="text-red-600 text-xs mt-1">{errors.alicuotaIva.message}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Costo de referencia</label>
+          <input type="number" step="0.01" {...register('costoReferencia')} className="w-full border rounded-lg px-3 py-2 text-sm" />
+          <p className="text-xs text-gray-500 mt-1">Precio de referencia individual/minorista. Opcional, se usa para pre-cargar la adjudicación.</p>
+          {errors.costoReferencia && <p className="text-red-600 text-xs mt-1">{errors.costoReferencia.message}</p>}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">Stock mínimo</label>
+            <input type="number" step="0.01" {...register('stockMinimo')} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            {errors.stockMinimo && <p className="text-red-600 text-xs mt-1">{errors.stockMinimo.message}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Stock de seguridad</label>
+            <input type="number" step="0.01" {...register('stockSeguridad')} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            {errors.stockSeguridad && <p className="text-red-600 text-xs mt-1">{errors.stockSeguridad.message}</p>}
+          </div>
         </div>
 
         <div className="flex gap-2">

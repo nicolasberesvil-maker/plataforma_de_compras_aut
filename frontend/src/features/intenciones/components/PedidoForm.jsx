@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -37,6 +38,11 @@ const schemaSuelto = z.object({
 export function PedidoForm({ campana, productoId, pedidoExistente, onGuardado }) {
   const queryClient = useQueryClient();
   const esSuelto = !campana;
+  // Dentro de una campaña, lo único obligatorio es la cantidad (regla D.1):
+  // el resto son preferencias que arrancan colapsadas para que "sumarse" sea
+  // un solo campo + un botón. Como pedido suelto, fecha y modalidad son
+  // obligatorias, así que se muestran siempre.
+  const [masOpciones, setMasOpciones] = useState(esSuelto || !!pedidoExistente);
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
     resolver: zodResolver(esSuelto ? schemaSuelto : schemaCampana),
@@ -86,53 +92,65 @@ export function PedidoForm({ campana, productoId, pedidoExistente, onGuardado })
         {errors.volumen && <p className="text-red-600 text-sm mt-1">{errors.volumen.message}</p>}
       </div>
 
-      <div>
-        <label className="block text-base font-medium mb-2">Cómo preferís recibirlo</label>
-        <div className="space-y-2">
-          <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer has-[:checked]:border-aut-verde has-[:checked]:bg-green-50">
-            <input {...register('modalidadEntregaPreferida')} type="radio" value="RETIRO_EN_DEPOSITO" />
-            <span>Retiro en depósito de AUT</span>
-          </label>
-          <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer has-[:checked]:border-aut-verde has-[:checked]:bg-green-50">
-            <input {...register('modalidadEntregaPreferida')} type="radio" value="ENTREGA_EN_CAMPO" />
-            <span>Entrega en mi campo</span>
-          </label>
-        </div>
-        {errors.modalidadEntregaPreferida && <p className="text-red-600 text-sm mt-1">{errors.modalidadEntregaPreferida.message}</p>}
-      </div>
+      {!masOpciones ? (
+        <button
+          type="button"
+          onClick={() => setMasOpciones(true)}
+          className="text-sm text-aut-verde font-medium underline underline-offset-2"
+        >
+          + Entrega, pago y otras preferencias (opcional)
+        </button>
+      ) : (
+        <>
+          <div>
+            <label className="block text-base font-medium mb-2">Cómo preferís recibirlo</label>
+            <div className="space-y-2">
+              <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer has-[:checked]:border-aut-verde has-[:checked]:bg-green-50">
+                <input {...register('modalidadEntregaPreferida')} type="radio" value="RETIRO_EN_DEPOSITO" />
+                <span>Retiro en depósito de AUT</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer has-[:checked]:border-aut-verde has-[:checked]:bg-green-50">
+                <input {...register('modalidadEntregaPreferida')} type="radio" value="ENTREGA_EN_CAMPO" />
+                <span>Entrega en mi campo</span>
+              </label>
+            </div>
+            {errors.modalidadEntregaPreferida && <p className="text-red-600 text-sm mt-1">{errors.modalidadEntregaPreferida.message}</p>}
+          </div>
 
-      {modalidad === 'ENTREGA_EN_CAMPO' && (
-        <div>
-          <label className="block text-base font-medium mb-2">Dirección de entrega</label>
-          <input {...register('direccionEntregaCampo')} type="text"
-                 className="w-full px-4 py-3 border-2 rounded-lg text-base"
-                 placeholder="Ej: Campo La Esperanza, Ruta 13 km 4" />
-          {errors.direccionEntregaCampo && <p className="text-red-600 text-sm mt-1">{errors.direccionEntregaCampo.message}</p>}
-        </div>
+          {modalidad === 'ENTREGA_EN_CAMPO' && (
+            <div>
+              <label className="block text-base font-medium mb-2">Dirección de entrega</label>
+              <input {...register('direccionEntregaCampo')} type="text"
+                     className="w-full px-4 py-3 border-2 rounded-lg text-base"
+                     placeholder="Ej: Campo La Esperanza, Ruta 13 km 4" />
+              {errors.direccionEntregaCampo && <p className="text-red-600 text-sm mt-1">{errors.direccionEntregaCampo.message}</p>}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-base font-medium mb-2">
+              ¿Para cuándo lo necesitás?{esSuelto ? '' : ' (opcional)'}
+            </label>
+            <input {...register('fechaDeseada')} type="date" className="w-full px-4 py-3 border-2 rounded-lg text-base" />
+            {errors.fechaDeseada && <p className="text-red-600 text-sm mt-1">{errors.fechaDeseada.message}</p>}
+          </div>
+
+          <div>
+            <label className="block text-base font-medium mb-2">¿Cómo preferís pagar? (opcional)</label>
+            <select {...register('formaPagoPreferida')} className="w-full px-4 py-3 border-2 rounded-lg text-base">
+              <option value="">Sin preferencia</option>
+              {FORMAS_PAGO.map(([valor, label]) => <option key={valor} value={valor}>{label}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-base font-medium mb-2">Observaciones (opcional)</label>
+            <textarea {...register('observaciones')} rows={3}
+                      className="w-full px-3 py-3 border-2 rounded-lg text-base"
+                      placeholder="Ej: Para los lotes del este" />
+          </div>
+        </>
       )}
-
-      <div>
-        <label className="block text-base font-medium mb-2">
-          ¿Para cuándo lo necesitás?{esSuelto ? '' : ' (opcional)'}
-        </label>
-        <input {...register('fechaDeseada')} type="date" className="w-full px-4 py-3 border-2 rounded-lg text-base" />
-        {errors.fechaDeseada && <p className="text-red-600 text-sm mt-1">{errors.fechaDeseada.message}</p>}
-      </div>
-
-      <div>
-        <label className="block text-base font-medium mb-2">¿Cómo preferís pagar? (opcional)</label>
-        <select {...register('formaPagoPreferida')} className="w-full px-4 py-3 border-2 rounded-lg text-base">
-          <option value="">Sin preferencia</option>
-          {FORMAS_PAGO.map(([valor, label]) => <option key={valor} value={valor}>{label}</option>)}
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-base font-medium mb-2">Observaciones (opcional)</label>
-        <textarea {...register('observaciones')} rows={3}
-                  className="w-full px-3 py-3 border-2 rounded-lg text-base"
-                  placeholder="Ej: Para los lotes del este" />
-      </div>
 
       {mutation.isError && (
         <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">

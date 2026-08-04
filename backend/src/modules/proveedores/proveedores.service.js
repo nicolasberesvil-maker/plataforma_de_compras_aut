@@ -1,5 +1,4 @@
 import bcrypt from 'bcrypt';
-import crypto from 'crypto';
 import { prisma } from '../../config/database.js';
 import { NotFoundError, ConflictError, ForbiddenError } from '../../utils/errors.js';
 import { eventBus } from '../../services/event-bus.service.js';
@@ -45,7 +44,7 @@ export async function obtenerPorId(id, usuarioSolicitante) {
   });
   if (!proveedor) throw new NotFoundError('Proveedor');
 
-  if (usuarioSolicitante && !['ADMIN', 'CONTADOR'].includes(usuarioSolicitante.rol) && usuarioSolicitante.id !== proveedor.usuarioId) {
+  if (usuarioSolicitante && usuarioSolicitante.rol !== 'ADMIN' && usuarioSolicitante.id !== proveedor.usuarioId) {
     throw new ForbiddenError('Solo podés ver tus propios datos');
   }
 
@@ -54,19 +53,23 @@ export async function obtenerPorId(id, usuarioSolicitante) {
 
 /**
  * Alta manual de proveedor por ADMIN. Crea Usuario + Proveedor en una
- * transacción y genera una password temporal (régimen cerrado, regla C.4:
- * los proveedores no se autoregistran).
+ * transacción. Régimen cerrado (regla C.4): los proveedores no se
+ * autoregistran; el ADMIN tipea usuario y contraseña a mano y se los
+ * comunica a la persona por fuera del sistema.
  */
 export async function crear(datos) {
-  const existe = await prisma.usuario.findUnique({ where: { email: datos.email } });
-  if (existe) throw new ConflictError('Email ya en uso');
+  const existeEmail = await prisma.usuario.findUnique({ where: { email: datos.email } });
+  if (existeEmail) throw new ConflictError('Email ya en uso');
 
-  const passwordTemporal = crypto.randomBytes(8).toString('hex');
-  const passwordHash = await bcrypt.hash(passwordTemporal, BCRYPT_COST);
+  const existeUsername = await prisma.usuario.findUnique({ where: { username: datos.username } });
+  if (existeUsername) throw new ConflictError('Nombre de usuario ya en uso');
+
+  const passwordHash = await bcrypt.hash(datos.password, BCRYPT_COST);
 
   const resultado = await prisma.$transaction(async (tx) => {
     const usuario = await tx.usuario.create({
       data: {
+        username: datos.username,
         email: datos.email,
         passwordHash,
         rol: 'PROVEEDOR',
@@ -92,10 +95,7 @@ export async function crear(datos) {
     return { usuario, proveedor };
   });
 
-  // TODO(nicolas, 2026-07): enviar email al proveedor con `passwordTemporal`
-  // cuando el servicio de email esté disponible (transversal, se activa en Fase 4).
-
-  return { ...resultado, passwordTemporal };
+  return resultado;
 }
 
 export async function actualizar(id, datos) {

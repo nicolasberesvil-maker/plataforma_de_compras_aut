@@ -1,10 +1,11 @@
+import bcrypt from 'bcrypt';
 import { prisma } from '../../config/database.js';
 import { NotFoundError, ConflictError, ForbiddenError } from '../../utils/errors.js';
-import { eventBus } from '../../services/event-bus.service.js';
 
-export async function listar({ aprobado, search, page = 1, limit = 20 }) {
+const BCRYPT_COST = 12;
+
+export async function listar({ search, page = 1, limit = 20 }) {
   const where = {};
-  if (aprobado !== undefined) where.aprobado = aprobado;
   if (search) {
     where.OR = [
       { razonSocial: { contains: search } },
@@ -26,18 +27,10 @@ export async function listar({ aprobado, search, page = 1, limit = 20 }) {
   return { data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 }
 
-export async function listarPendientes() {
-  return prisma.productor.findMany({
-    where: { aprobado: false },
-    include: { usuario: { select: { email: true, nombre: true, apellido: true, telefono: true } } },
-    orderBy: { createdAt: 'asc' }
-  });
-}
-
 // Usado por el módulo de notificaciones (avisos masivos a productores activos).
 export async function listarAprobados() {
   return prisma.productor.findMany({
-    where: { aprobado: true, usuario: { activo: true } },
+    where: { usuario: { activo: true } },
     include: { usuario: true }
   });
 }
@@ -49,11 +42,55 @@ export async function obtenerPorId(id, usuarioSolicitante) {
   });
   if (!productor) throw new NotFoundError('Productor');
 
-  if (usuarioSolicitante && !['ADMIN', 'CONTADOR'].includes(usuarioSolicitante.rol) && usuarioSolicitante.id !== productor.usuarioId) {
+  if (usuarioSolicitante && usuarioSolicitante.rol !== 'ADMIN' && usuarioSolicitante.id !== productor.usuarioId) {
     throw new ForbiddenError('Solo podés ver tus propios datos');
   }
 
   return productor;
+}
+
+/**
+ * Alta manual de productor por ADMIN. Crea Usuario + Productor en una
+ * transacción, ya activo (sin estado de aprobación pendiente). El ADMIN
+ * tipea usuario y contraseña a mano y se los comunica a la persona por
+ * fuera del sistema.
+ */
+export async function crear(datos) {
+  const existeEmail = await prisma.usuario.findUnique({ where: { email: datos.email } });
+  if (existeEmail) throw new ConflictError('Email ya en uso');
+
+  const existeUsername = await prisma.usuario.findUnique({ where: { username: datos.username } });
+  if (existeUsername) throw new ConflictError('Nombre de usuario ya en uso');
+
+  const passwordHash = await bcrypt.hash(datos.password, BCRYPT_COST);
+
+  return prisma.$transaction(async (tx) => {
+    const usuario = await tx.usuario.create({
+      data: {
+        username: datos.username,
+        email: datos.email,
+        passwordHash,
+        rol: 'PRODUCTOR',
+        activo: true,
+        nombre: datos.nombre,
+        apellido: datos.apellido,
+        telefono: datos.telefono
+      }
+    });
+
+    const productor = await tx.productor.create({
+      data: {
+        usuarioId: usuario.id,
+        razonSocial: datos.razonSocial,
+        cuit: datos.cuit,
+        condicionFiscal: datos.condicionFiscal,
+        domicilioFiscal: datos.domicilioFiscal,
+        localidad: datos.localidad
+      }
+    });
+
+    return { usuario, productor };
+  });
 }
 
 export async function actualizar(id, datos, usuarioSolicitante) {
@@ -76,44 +113,3 @@ export async function actualizar(id, datos, usuarioSolicitante) {
   });
 }
 
-export async function aprobar(id) {
-  const productor = await prisma.productor.findUnique({ where: { id }, include: { usuario: true } });
-  if (!productor) throw new NotFoundError('Productor');
-  if (productor.aprobado) throw new ConflictError('Productor ya aprobado');
-
-  // Transacción: aprobar productor + activar usuario
-  const resultado = await prisma.$transaction(async (tx) => {
-    const p = await tx.productor.update({
-      where: { id },
-      data: { aprobado: true, aprobadoAt: new Date() }
-    });
-    await tx.usuario.update({
-      where: { id: productor.usuarioId },
-      data: { activo: true }
-    });
-    return p;
-  });
-
-  eventBus.emit('PRODUCTOR_APROBADO', {
-    productorId: id,
-    usuarioId: productor.usuarioId
-  });
-
-  return resultado;
-}
-
-export async function rechazar(id, motivo) {
-  const productor = await prisma.productor.findUnique({ where: { id } });
-  if (!productor) throw new NotFoundError('Productor');
-  if (productor.aprobado) throw new ConflictError('Productor ya aprobado, no se puede rechazar');
-
-  await prisma.usuario.update({
-    where: { id: productor.usuarioId },
-    data: { activo: false }
-  });
-
-  // TODO(nicolas, 2026-07): no hay evento PRODUCTOR_RECHAZADO documentado en
-  // 04-NOTIFICACIONES.md. Notificar al productor con `motivo` queda pendiente
-  // hasta que se defina el catálogo de eventos de rechazo.
-  return motivo;
-}

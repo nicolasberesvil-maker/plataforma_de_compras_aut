@@ -9,10 +9,10 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/mias', requireRole(['PRODUCTOR']), ctrl.listarMias);
-router.get('/', requireRole(['ADMIN', 'OPERADOR', 'CONTADOR']), validate(filtrosOrdenSchema, 'query'), ctrl.listar);
+router.get('/', requireRole(['ADMIN']), validate(filtrosOrdenSchema, 'query'), ctrl.listar);
 router.get('/:id', ctrl.obtenerPorId);
 
 router.patch('/:id/forma-pago', validate(definirFormaPagoSchema), ctrl.definirFormaPago);
-router.post('/:id/marcar-pagada', requireRole(['ADMIN', 'CONTADOR']), ctrl.marcarPagada);
+router.post('/:id/marcar-pagada', requireRole(['ADMIN']), ctrl.marcarPagada);
 
 export default router;

@@ -10,9 +10,9 @@ export function EntregaDetailPage() {
   const usuario = useAuthStore((s) => s.usuario);
   const rol = usuario?.rol;
   const esOperadorDeposito = rol === 'OPERADOR_DEPOSITO';
-  const puedeVerProductor = ['ADMIN', 'CONTADOR', 'OPERADOR_DEPOSITO'].includes(rol);
-  const puedeFacturar = ['ADMIN', 'CONTADOR'].includes(rol);
-  const volverA = esOperadorDeposito ? '/deposito' : puedeFacturar ? '/admin/entregas' : '/productor/mis-entregas';
+  const puedeVerProductor = ['ADMIN', 'OPERADOR_DEPOSITO'].includes(rol);
+  const puedeFacturar = rol === 'ADMIN';
+  const volverA = esOperadorDeposito ? '/deposito' : puedeFacturar ? '/admin/stock?tab=retiros' : '/productor/mis-entregas';
 
   const { data, isLoading } = useQuery({
     queryKey: ['entregas', id],

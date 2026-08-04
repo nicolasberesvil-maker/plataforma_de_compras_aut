@@ -1,17 +1,20 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import { useLogin } from '../hooks/useAuth';
 
 const schema = z.object({
-  email: z.string().email('Email inválido'),
+  username: z.string().min(1, 'Requerido'),
   password: z.string().min(1, 'Requerido')
 });
 
 export function LoginForm() {
   const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(schema) });
   const login = useLogin();
+  const [mostrarPassword, setMostrarPassword] = useState(false);
 
   return (
     <form onSubmit={handleSubmit((data) => login.mutate(data))}
@@ -19,16 +22,26 @@ export function LoginForm() {
       <h1 className="text-2xl font-bold text-aut-verde">Ingresar</h1>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Email</label>
-        <input {...register('email')} type="email" autoComplete="email"
+        <label className="block text-sm font-medium mb-1">Usuario</label>
+        <input {...register('username')} type="text" autoComplete="username"
                className="w-full px-3 py-3 border rounded-lg text-base" />
-        {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>}
+        {errors.username && <p className="text-red-600 text-sm mt-1">{errors.username.message}</p>}
       </div>
 
       <div>
         <label className="block text-sm font-medium mb-1">Contraseña</label>
-        <input {...register('password')} type="password" autoComplete="current-password"
-               className="w-full px-3 py-3 border rounded-lg text-base" />
+        <div className="relative">
+          <input {...register('password')} type={mostrarPassword ? 'text' : 'password'} autoComplete="current-password"
+                 className="w-full px-3 py-3 pr-10 border rounded-lg text-base" />
+          <button
+            type="button"
+            onClick={() => setMostrarPassword((v) => !v)}
+            className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
+            aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+          >
+            {mostrarPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
         {errors.password && <p className="text-red-600 text-sm mt-1">{errors.password.message}</p>}
       </div>
 
@@ -45,10 +58,6 @@ export function LoginForm() {
 
       <p className="text-sm text-center">
         <Link to="/forgot-password" className="text-gray-600">¿Olvidaste tu contraseña?</Link>
-      </p>
-
-      <p className="text-sm text-center text-gray-600">
-        ¿No tenés cuenta? <Link to="/registro" className="text-aut-verde font-medium">Registrate</Link>
       </p>
     </form>
   );

@@ -1,10 +1,23 @@
 import { z } from 'zod';
 
 export const listarProductoresSchema = z.object({
-  aprobado: z.coerce.boolean().optional(),
   search: z.string().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20)
+});
+
+export const crearProductorSchema = z.object({
+  username: z.string().min(3).max(50),
+  password: z.string().min(8).max(100),
+  email: z.string().email(),
+  nombre: z.string().min(2).max(50),
+  apellido: z.string().min(2).max(50),
+  telefono: z.string().optional(),
+  razonSocial: z.string().min(2),
+  cuit: z.string().regex(/^\d{11}$/, 'CUIT debe tener 11 dígitos'),
+  condicionFiscal: z.enum(['RESPONSABLE_INSCRIPTO', 'MONOTRIBUTISTA', 'EXENTO', 'CONSUMIDOR_FINAL']),
+  domicilioFiscal: z.string().min(5),
+  localidad: z.string().min(2)
 });
 
 export const actualizarProductorSchema = z.object({
@@ -13,8 +26,4 @@ export const actualizarProductorSchema = z.object({
   condicionFiscal: z.enum(['RESPONSABLE_INSCRIPTO', 'MONOTRIBUTISTA', 'EXENTO', 'CONSUMIDOR_FINAL']).optional(),
   domicilioFiscal: z.string().min(5).optional(),
   localidad: z.string().min(2).optional()
-});
-
-export const rechazarProductorSchema = z.object({
-  motivo: z.string().min(3).optional()
 });

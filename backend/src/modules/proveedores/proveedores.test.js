@@ -17,12 +17,12 @@ async function crearAdmin(email) {
   emailsCreados.push(email);
   const passwordHash = await bcrypt.hash('clave12345', 4);
   return prisma.usuario.create({
-    data: { email, passwordHash, rol: 'ADMIN', activo: true, nombre: 'Admin', apellido: 'AUT' }
+    data: { email, username: email.split('@')[0], passwordHash, rol: 'ADMIN', activo: true, nombre: 'Admin', apellido: 'AUT' }
   });
 }
 
-async function login(email) {
-  const res = await request(app).post('/api/auth/login').send({ email, password: 'clave12345' });
+async function login(username) {
+  const res = await request(app).post('/api/auth/login').send({ username, password: 'clave12345' });
   return res.body.accessToken;
 }
 
@@ -34,18 +34,21 @@ afterAll(async () => {
 });
 
 describe('POST /api/proveedores', () => {
-  it('un ADMIN da de alta un proveedor con usuario activo y password temporal', async () => {
+  it('un ADMIN da de alta un proveedor con usuario y contraseña que él mismo define', async () => {
     const emailAdmin = `alta-admin-${run}@test.com`;
     await crearAdmin(emailAdmin);
-    const token = await login(emailAdmin);
+    const token = await login(emailAdmin.split('@')[0]);
 
     const emailProveedor = `alta-prov-${run}@test.com`;
+    const usernameProveedor = `alta-prov-${run}`;
     emailsCreados.push(emailProveedor);
 
     const res = await request(app)
       .post('/api/proveedores')
       .set('Authorization', `Bearer ${token}`)
       .send({
+        username: usernameProveedor,
+        password: 'clave12345',
         email: emailProveedor,
         nombre: 'Carlos',
         apellido: 'Gomez',
@@ -57,11 +60,14 @@ describe('POST /api/proveedores', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.proveedor.estadoAprobacion).toBe('APROBADO');
-    expect(res.body.passwordTemporal).toBeDefined();
+    expect(res.body.usuario.username).toBe(usernameProveedor);
 
     const usuarioCreado = await prisma.usuario.findUnique({ where: { email: emailProveedor } });
     expect(usuarioCreado.activo).toBe(true);
     expect(usuarioCreado.rol).toBe('PROVEEDOR');
+
+    const loginNuevo = await login(usernameProveedor);
+    expect(loginNuevo).toBeDefined();
   });
 
   it('rechaza un PRODUCTOR intentando crear proveedores con 403', async () => {
@@ -69,14 +75,16 @@ describe('POST /api/proveedores', () => {
     emailsCreados.push(email);
     const passwordHash = await bcrypt.hash('clave12345', 4);
     await prisma.usuario.create({
-      data: { email, passwordHash, rol: 'PRODUCTOR', activo: true, nombre: 'A', apellido: 'B' }
+      data: { email, username: email.split('@')[0], passwordHash, rol: 'PRODUCTOR', activo: true, nombre: 'A', apellido: 'B' }
     });
-    const token = await login(email);
+    const token = await login(email.split('@')[0]);
 
     const res = await request(app)
       .post('/api/proveedores')
       .set('Authorization', `Bearer ${token}`)
       .send({
+        username: `x-${run}`,
+        password: 'clave12345',
         email: `x-${run}@test.com`,
         nombre: 'X',
         apellido: 'Y',
@@ -94,7 +102,7 @@ describe('PATCH /api/proveedores/:id/suspender', () => {
   it('suspende a un proveedor aprobado', async () => {
     const emailAdmin = `susp-admin-${run}@test.com`;
     await crearAdmin(emailAdmin);
-    const token = await login(emailAdmin);
+    const token = await login(emailAdmin.split('@')[0]);
 
     const emailProveedor = `susp-prov-${run}@test.com`;
     emailsCreados.push(emailProveedor);
@@ -102,6 +110,8 @@ describe('PATCH /api/proveedores/:id/suspender', () => {
       .post('/api/proveedores')
       .set('Authorization', `Bearer ${token}`)
       .send({
+        username: `susp-prov-${run}`,
+        password: 'clave12345',
         email: emailProveedor,
         nombre: 'Marta',
         apellido: 'Diaz',

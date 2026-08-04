@@ -1,4 +1,5 @@
 import * as proveedoresService from './proveedores.service.js';
+import { obtenerCuentaCorriente, registrarPago } from './proveedores.cuenta-corriente.js';
 
 export async function listar(req, res, next) {
   try {
@@ -16,11 +17,10 @@ export async function obtenerPorId(req, res, next) {
 
 export async function crear(req, res, next) {
   try {
-    const { usuario, proveedor, passwordTemporal } = await proveedoresService.crear(req.body);
+    const { usuario, proveedor } = await proveedoresService.crear(req.body);
     res.status(201).json({
       proveedor,
-      usuario: { id: usuario.id, email: usuario.email },
-      passwordTemporal
+      usuario: { id: usuario.id, username: usuario.username, email: usuario.email }
     });
   } catch (err) { next(err); }
 }
@@ -43,5 +43,22 @@ export async function suspender(req, res, next) {
   try {
     const proveedor = await proveedoresService.suspender(Number(req.params.id));
     res.json({ proveedor });
+  } catch (err) { next(err); }
+}
+
+export async function cuentaCorriente(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    await proveedoresService.obtenerPorId(id, req.usuario);
+    const cuentaCorriente = await obtenerCuentaCorriente(id);
+    res.json(cuentaCorriente);
+  } catch (err) { next(err); }
+}
+
+export async function crearPago(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    const pago = await registrarPago(id, req.body, req.usuario.id);
+    res.status(201).json({ pago });
   } catch (err) { next(err); }
 }

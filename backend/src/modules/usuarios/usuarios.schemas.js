@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const listarUsuariosSchema = z.object({
-  rol: z.enum(['PRODUCTOR', 'PROVEEDOR', 'ADMIN', 'OPERADOR', 'CONTADOR', 'OPERADOR_DEPOSITO']).optional(),
+  rol: z.enum(['PRODUCTOR', 'PROVEEDOR', 'ADMIN', 'OPERADOR_DEPOSITO']).optional(),
   activo: z.coerce.boolean().optional(),
   search: z.string().optional(),
   page: z.coerce.number().int().positive().default(1),
@@ -12,7 +12,7 @@ export const actualizarUsuarioSchema = z.object({
   nombre: z.string().min(2).max(50).optional(),
   apellido: z.string().min(2).max(50).optional(),
   telefono: z.string().optional(),
-  rol: z.enum(['PRODUCTOR', 'PROVEEDOR', 'ADMIN', 'OPERADOR', 'CONTADOR', 'OPERADOR_DEPOSITO']).optional()
+  rol: z.enum(['PRODUCTOR', 'PROVEEDOR', 'ADMIN', 'OPERADOR_DEPOSITO']).optional()
 });
 
 export const cambiarPasswordSchema = z.object({

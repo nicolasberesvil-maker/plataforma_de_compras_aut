@@ -121,7 +121,7 @@ export async function obtenerPorId(id, usuario) {
   if (usuario.rol === 'PRODUCTOR') {
     const productor = await prisma.productor.findUnique({ where: { usuarioId: usuario.id } });
     if (!productor || factura.ordenCompra.productorId !== productor.id) throw new ForbiddenError();
-  } else if (!['ADMIN', 'CONTADOR'].includes(usuario.rol)) {
+  } else if (!['ADMIN'].includes(usuario.rol)) {
     throw new ForbiddenError();
   }
 

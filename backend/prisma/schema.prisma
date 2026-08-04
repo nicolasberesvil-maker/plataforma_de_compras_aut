@@ -21,6 +21,7 @@ datasource db {
 // Cualquier persona que se loguea es un Usuario. El rol determina qué endpoints puede usar.
 model Usuario {
   id           Int        @id @default(autoincrement())
+  username     String     @unique
   email        String     @unique
   passwordHash String     @map("password_hash")
   rol          RolUsuario
@@ -41,6 +42,9 @@ model Usuario {
   campanasCreadas     Campana[]            @relation("CampanasCreadas")
   notificaciones      Notificacion[]
   movimientosStockEjecutados StockMovimiento[]
+  pagosProveedorRegistrados PagoProveedor[]
+  remitosRegistrados        Remito[]
+  pagosRegistrados          Pago[]
 
   @@map("usuarios")
 }
@@ -49,8 +53,6 @@ enum RolUsuario {
   PRODUCTOR
   PROVEEDOR
   ADMIN
-  OPERADOR
-  CONTADOR
   OPERADOR_DEPOSITO
 }
 
@@ -66,15 +68,12 @@ model Productor {
   domicilioFiscal String          @map("domicilio_fiscal")
   localidad       String
 
-  // Para tracking de aprobación por AUT (regla D.3)
-  aprobado   Boolean   @default(false)
-  aprobadoAt DateTime? @map("aprobado_at")
-
   createdAt DateTime @default(now()) @map("created_at")
 
   intenciones IntencionCompra[]
   ordenes     OrdenCompra[]
   entregas    Entrega[]
+  pagos       Pago[]
 
   @@map("productores")
 }
@@ -103,8 +102,34 @@ model Proveedor {
   createdAt DateTime @default(now()) @map("created_at")
 
   cotizaciones Cotizacion[]
+  pagos        PagoProveedor[]
+  remitos      Remito[]
 
   @@map("proveedores")
+}
+
+// Carga manual (regla M2): el ADMIN registra fecha, monto y medio cada vez
+// que AUT le transfiere al proveedor. Sin conciliación automática en v1.
+model PagoProveedor {
+  id          Int       @id @default(autoincrement())
+  proveedorId Int       @map("proveedor_id")
+  proveedor   Proveedor @relation(fields: [proveedorId], references: [id])
+
+  fecha     DateTime
+  monto     Decimal   @db.Decimal(12, 2)
+  medioPago FormaPago @map("medio_pago")
+
+  adjudicacionId Int?          @map("adjudicacion_id")
+  adjudicacion   Adjudicacion? @relation(fields: [adjudicacionId], references: [id])
+
+  observaciones String? @db.Text
+
+  registradoPorId Int     @map("registrado_por_id")
+  registradoPor   Usuario @relation(fields: [registradoPorId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("pagos_proveedor")
 }
 
 enum EstadoAprobacion {
@@ -126,6 +151,12 @@ model Producto {
   unidadMedida UnidadMedida      @map("unidad_medida")
   alicuotaIva  Decimal           @map("alicuota_iva") @db.Decimal(5, 2)
   activo       Boolean           @default(true)
+
+  // Precio de referencia individual/minorista (no el costo interno de AUT) y
+  // umbrales de reposición. Nullable: se completan de a poco desde el panel.
+  costoReferencia Decimal? @map("costo_referencia") @db.Decimal(12, 4)
+  stockMinimo     Decimal? @map("stock_minimo") @db.Decimal(12, 2)
+  stockSeguridad  Decimal? @map("stock_seguridad") @db.Decimal(12, 2)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -253,6 +284,7 @@ model Campana {
   intenciones  IntencionCompra[]
   cotizaciones Cotizacion[]
   adjudicacion Adjudicacion?
+  remitos      Remito[]
 
   @@index([estado])
   @@index([fechaCierre])
@@ -449,7 +481,8 @@ model Adjudicacion {
 
   adjudicadaAt DateTime @default(now()) @map("adjudicada_at")
 
-  ordenes OrdenCompra[]
+  ordenes        OrdenCompra[]
+  pagosProveedor PagoProveedor[]
 
   @@map("adjudicaciones")
 }
@@ -483,6 +516,7 @@ model OrdenCompra {
 
   entrega Entrega?
   factura Factura?
+  pagosAplicados PagoAplicacion[]
 
   @@map("ordenes_compra")
 }
@@ -561,8 +595,41 @@ model Deposito {
 
   movimientosStock StockMovimiento[]
   entregas         Entrega[]
+  remitos          Remito[]
 
   @@map("depositos")
+}
+
+// Comprobante formal de la mercadería recibida de un proveedor adjudicado.
+// Al cargarlo dispara automáticamente el StockMovimiento INGRESO_PROVEEDOR
+// correspondiente (regla M3: antes esa carga de stock iba suelta).
+model Remito {
+  id Int @id @default(autoincrement())
+
+  campanaId Int     @map("campana_id")
+  campana   Campana @relation(fields: [campanaId], references: [id])
+
+  proveedorId Int       @map("proveedor_id")
+  proveedor   Proveedor @relation(fields: [proveedorId], references: [id])
+
+  depositoId Int      @map("deposito_id")
+  deposito   Deposito @relation(fields: [depositoId], references: [id])
+
+  numero            String
+  fecha             DateTime
+  cantidadRecibida  Decimal  @map("cantidad_recibida") @db.Decimal(12, 2)
+  observaciones     String?  @db.Text
+  adjuntoUrl        String?  @map("adjunto_url")
+
+  movimientoStockId Int?             @unique @map("movimiento_stock_id")
+  movimientoStock   StockMovimiento? @relation(fields: [movimientoStockId], references: [id])
+
+  registradoPorId Int     @map("registrado_por_id")
+  registradoPor   Usuario @relation(fields: [registradoPorId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("remitos")
 }
 
 // Libro de movimientos de stock (append-only). El stock actual NUNCA se
@@ -591,6 +658,8 @@ model StockMovimiento {
   ejecutadoPor   Usuario @relation(fields: [ejecutadoPorId], references: [id])
 
   fecha DateTime @default(now())
+
+  remito Remito?
 
   @@index([depositoId, productoId])
   @@index([fecha])
@@ -658,4 +727,63 @@ model ItemFactura {
   subtotal       Decimal @db.Decimal(14, 2)
 
   @@map("items_factura")
+}
+
+// ============================================================
+// PAGOS DEL PRODUCTOR (Fase M5 — declaración multi-orden/multi-medio)
+// ============================================================
+
+// El productor declara que pagó; queda DECLARADO hasta que ADMIN confirma
+// que vio la plata acreditada (recién ahí impacta OrdenCompra.estadoPago).
+model Pago {
+  id          Int       @id @default(autoincrement())
+  productorId Int       @map("productor_id")
+  productor   Productor @relation(fields: [productorId], references: [id])
+
+  fecha       DateTime
+  montoTotal  Decimal      @map("monto_total") @db.Decimal(14, 2)
+  estado      EstadoPagoDeclarado @default(DECLARADO)
+  observaciones String?    @db.Text
+
+  registradoPorId Int     @map("registrado_por_id")
+  registradoPor   Usuario @relation(fields: [registradoPorId], references: [id])
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  confirmadoAt DateTime? @map("confirmado_at")
+
+  aplicaciones PagoAplicacion[]
+  medios       PagoMedio[]
+
+  @@map("pagos")
+}
+
+enum EstadoPagoDeclarado {
+  DECLARADO
+  CONFIRMADO
+  RECHAZADO
+}
+
+// A qué orden(es) de compra se aplica el pago (parcial o total).
+model PagoAplicacion {
+  id            Int         @id @default(autoincrement())
+  pagoId        Int         @map("pago_id")
+  pago          Pago        @relation(fields: [pagoId], references: [id])
+  ordenCompraId Int         @map("orden_compra_id")
+  ordenCompra   OrdenCompra @relation(fields: [ordenCompraId], references: [id])
+
+  montoAplicado Decimal @map("monto_aplicado") @db.Decimal(14, 2)
+
+  @@map("pagos_aplicaciones")
+}
+
+// Con qué medio(s) se compone el pago. Suma de montos == Pago.montoTotal.
+model PagoMedio {
+  id     Int       @id @default(autoincrement())
+  pagoId Int       @map("pago_id")
+  pago   Pago      @relation(fields: [pagoId], references: [id])
+
+  formaPago FormaPago @map("forma_pago")
+  monto     Decimal   @db.Decimal(14, 2)
+
+  @@map("pagos_medios")
 }

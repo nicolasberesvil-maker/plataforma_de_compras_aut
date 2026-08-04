@@ -37,7 +37,7 @@ export function DepositoDetailPage() {
           <h2 className="text-lg font-bold">{deposito?.nombre}</h2>
           <p className="text-sm text-gray-600">{deposito?.direccion}, {deposito?.localidad}</p>
         </div>
-        <Link to="/admin/depositos" className="text-sm text-aut-verde font-medium">Volver</Link>
+        <Link to="/admin/stock" className="text-sm text-aut-verde font-medium">Volver</Link>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -67,7 +67,7 @@ export function DepositoDetailPage() {
         </div>
       </div>
 
-      <Link to={`/admin/movimientos-stock?depositoId=${depositoId}`} className="text-sm text-aut-verde font-medium">
+      <Link to={`/admin/stock?tab=movimientos&depositoId=${depositoId}`} className="text-sm text-aut-verde font-medium">
         Ver historial de movimientos →
       </Link>
     </div>

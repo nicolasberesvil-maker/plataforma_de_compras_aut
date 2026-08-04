@@ -1,17 +1,26 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSocket } from '../../../hooks/useSocket';
 import { campanasApi } from '../api/campanas.api';
 import { TipoBadge } from '../components/TipoBadge';
 import { EstadoBadge } from '../components/EstadoBadge';
+import { CotizacionEstadoBadge } from '../components/CotizacionEstadoBadge';
 import { ProgresoVolumen } from '../components/ProgresoVolumen';
 import { AccionesCampana } from '../components/AccionesCampana';
+import { OrdenesTab } from '../components/OrdenesTab';
+import { RemitosTab } from '../components/RemitosTab';
+
+const TABS = [
+  { id: 'ordenes', label: 'Órdenes de compra' },
+  { id: 'remitos', label: 'Remitos' }
+];
 
 export function CampanaDetailPage() {
   const { id } = useParams();
   const socket = useSocket();
   const queryClient = useQueryClient();
+  const [tab, setTab] = useState('ordenes');
 
   const { data, isLoading } = useQuery({
     queryKey: ['campanas', id],
@@ -21,6 +30,10 @@ export function CampanaDetailPage() {
   const { data: resumenData } = useQuery({
     queryKey: ['campanas', id, 'resumen'],
     queryFn: () => campanasApi.obtenerResumen(id)
+  });
+
+  const avisarProductores = useMutation({
+    mutationFn: () => campanasApi.avisarProductores(id)
   });
 
   useEffect(() => {
@@ -62,14 +75,26 @@ export function CampanaDetailPage() {
             <h2 className="text-lg font-bold">{campana.nombre}</h2>
             <TipoBadge tipo={campana.tipo} />
             <EstadoBadge estado={campana.estado} />
+            <CotizacionEstadoBadge campana={campana} />
           </div>
           <p className="text-sm text-gray-600">{campana.producto?.nombre}</p>
         </div>
-        {campana.estado === 'BORRADOR' && (
-          <Link to={`/admin/campanas/${campana.id}/editar`} className="text-aut-verde text-sm font-medium">
-            Editar
-          </Link>
-        )}
+        <div className="flex items-center gap-3">
+          {campana.estado === 'ABIERTA' && (
+            <button
+              onClick={() => avisarProductores.mutate()}
+              disabled={avisarProductores.isPending}
+              className="text-sm text-aut-verde font-medium disabled:opacity-50"
+            >
+              {avisarProductores.isPending ? 'Avisando...' : avisarProductores.isSuccess ? 'Aviso enviado ✓' : 'Avisar a productores'}
+            </button>
+          )}
+          {campana.estado === 'BORRADOR' && (
+            <Link to={`/admin/campanas/${campana.id}/editar`} className="text-aut-verde text-sm font-medium">
+              Editar
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="bg-white border rounded-lg p-4 space-y-3">
@@ -116,6 +141,23 @@ export function CampanaDetailPage() {
         <h3 className="text-sm font-medium mb-2">Acciones</h3>
         <AccionesCampana campana={campana} />
       </div>
+
+      <div className="flex gap-2 border-b">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${
+              tab === t.id ? 'border-aut-verde text-aut-verde' : 'border-transparent text-gray-600'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'ordenes' && <OrdenesTab campanaId={campana.id} />}
+      {tab === 'remitos' && <RemitosTab campana={campana} />}
     </div>
   );
 }

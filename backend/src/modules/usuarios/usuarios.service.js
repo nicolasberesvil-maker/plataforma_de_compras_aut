@@ -10,6 +10,7 @@ export async function listar({ rol, activo, search, page = 1, limit = 20 }) {
   if (activo !== undefined) where.activo = activo;
   if (search) {
     where.OR = [
+      { username: { contains: search } },
       { email: { contains: search } },
       { nombre: { contains: search } },
       { apellido: { contains: search } }
@@ -20,7 +21,7 @@ export async function listar({ rol, activo, search, page = 1, limit = 20 }) {
     prisma.usuario.findMany({
       where,
       select: {
-        id: true, email: true, nombre: true, apellido: true,
+        id: true, username: true, email: true, nombre: true, apellido: true,
         telefono: true, rol: true, activo: true,
         createdAt: true, ultimoLoginAt: true
       },
@@ -68,7 +69,7 @@ export async function actualizar(id, datos, usuarioSolicitante) {
       telefono: datos.telefono,
       ...(rolNuevo && { rol: rolNuevo })
     },
-    select: { id: true, email: true, nombre: true, apellido: true, telefono: true, rol: true, activo: true }
+    select: { id: true, username: true, email: true, nombre: true, apellido: true, telefono: true, rol: true, activo: true }
   });
 }
 
@@ -79,7 +80,7 @@ export async function cambiarEstado(id, activo) {
   return prisma.usuario.update({
     where: { id },
     data: { activo },
-    select: { id: true, email: true, activo: true }
+    select: { id: true, username: true, email: true, activo: true }
   });
 }
 

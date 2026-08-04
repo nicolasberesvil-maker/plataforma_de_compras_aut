@@ -2,6 +2,7 @@ export function UsuarioRow({ usuario, onActivar, onDesactivar, isLoading }) {
   return (
     <tr className="border-b">
       <td className="py-2 px-3 text-sm">{usuario.nombre} {usuario.apellido}</td>
+      <td className="py-2 px-3 text-sm text-gray-600">{usuario.username}</td>
       <td className="py-2 px-3 text-sm text-gray-600">{usuario.email}</td>
       <td className="py-2 px-3 text-sm">{usuario.rol}</td>
       <td className="py-2 px-3 text-sm">

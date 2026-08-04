@@ -18,9 +18,10 @@ export async function listarMias(usuarioId) {
   });
 }
 
-export async function listar({ estadoPago, page = 1, limit = 20 }) {
+export async function listar({ estadoPago, campanaId, page = 1, limit = 20 }) {
   const where = {};
   if (estadoPago) where.estadoPago = estadoPago;
+  if (campanaId) where.adjudicacion = { campanaId };
 
   const [data, total] = await Promise.all([
     prisma.ordenCompra.findMany({

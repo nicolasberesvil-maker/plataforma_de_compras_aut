@@ -20,9 +20,13 @@ export async function obtenerCuentaCorriente(productorId) {
     orderBy: { createdAt: 'desc' }
   });
 
+  const montoPagadoPorOrden = await montoConfirmadoPorOrden(ordenes.map((o) => o.id));
+
   const porOrden = ordenes.map((o) => {
     const entregado = o.entrega?.estado === 'ENTREGADA';
     const volumenEntregado = entregado ? Number(o.volumenFinal) : 0;
+    const montoTotal = Number(o.total);
+    const montoPagado = montoPagadoPorOrden.get(o.id) ?? 0;
 
     return {
       ordenCompraId: o.id,
@@ -31,7 +35,9 @@ export async function obtenerCuentaCorriente(productorId) {
       volumenEntregado,
       volumenPendiente: Number(o.volumenFinal) - volumenEntregado,
       estadoEntrega: o.entrega?.estado ?? 'PENDIENTE',
-      montoTotal: Number(o.total),
+      montoTotal,
+      montoPagado,
+      montoPendiente: Math.max(0, montoTotal - montoPagado),
       estadoPago: o.estadoPago
     };
   });
@@ -40,8 +46,28 @@ export async function obtenerCuentaCorriente(productorId) {
     totalOrdenado: acc.totalOrdenado + o.montoTotal,
     totalEntregado: acc.totalEntregado + (o.volumenPendiente === 0 ? o.montoTotal : 0),
     totalPendienteEntrega: acc.totalPendienteEntrega + (o.volumenPendiente > 0 ? o.montoTotal : 0),
-    montoTotalAdeudado: acc.montoTotalAdeudado + (o.estadoPago !== 'PAGADO' ? o.montoTotal : 0)
+    // Antes contaba el montoTotal entero de cualquier orden no PAGADA, lo que
+    // sobrestimaba la deuda de una orden PARCIAL que ya tiene pagos
+    // confirmados. Ahora resta lo ya confirmado.
+    montoTotalAdeudado: acc.montoTotalAdeudado + o.montoPendiente
   }), { totalOrdenado: 0, totalEntregado: 0, totalPendienteEntrega: 0, montoTotalAdeudado: 0 });
 
   return { productorId, resumen, porOrden };
+}
+
+/**
+ * Suma, por orden, lo ya aplicado en pagos CONFIRMADOS (no cuenta lo
+ * DECLARADO todavía). Usado tanto para mostrar el saldo pendiente como para
+ * que pagos.service.js valide que un nuevo pago no exceda ese saldo.
+ */
+export async function montoConfirmadoPorOrden(ordenIds) {
+  if (ordenIds.length === 0) return new Map();
+
+  const agrupado = await prisma.pagoAplicacion.groupBy({
+    by: ['ordenCompraId'],
+    where: { ordenCompraId: { in: ordenIds }, pago: { estado: 'CONFIRMADO' } },
+    _sum: { montoAplicado: true }
+  });
+
+  return new Map(agrupado.map((a) => [a.ordenCompraId, Number(a._sum.montoAplicado ?? 0)]));
 }

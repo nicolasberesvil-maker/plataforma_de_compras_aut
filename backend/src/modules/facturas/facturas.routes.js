@@ -9,10 +9,10 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/mias', requireRole(['PRODUCTOR']), ctrl.listarMias);
-router.get('/', requireRole(['ADMIN', 'CONTADOR']), validate(filtrosFacturaSchema, 'query'), ctrl.listar);
+router.get('/', requireRole(['ADMIN']), validate(filtrosFacturaSchema, 'query'), ctrl.listar);
 router.get('/:id', ctrl.obtenerPorId);
 router.get('/:id/pdf', ctrl.descargarPdf);
 
-router.post('/generar/:ordenCompraId', requireRole(['ADMIN', 'CONTADOR']), ctrl.generar);
+router.post('/generar/:ordenCompraId', requireRole(['ADMIN']), ctrl.generar);
 
 export default router;

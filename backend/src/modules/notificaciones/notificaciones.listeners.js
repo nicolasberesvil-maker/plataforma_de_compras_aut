@@ -9,12 +9,12 @@ import { logger } from '../../utils/logger.js';
  * Registra los listeners de notificaciones. Se llama una sola vez al iniciar la app.
  */
 export function registrarListenersNotificaciones() {
-  eventBus.on('PRODUCTOR_APROBADO', onProductorAprobado);
   eventBus.on('PROVEEDOR_APROBADO', onProveedorAprobado);
   eventBus.on('SOLICITUD_RECIBIDA', onSolicitudRecibida);
   eventBus.on('SOLICITUD_AGRUPADA', onSolicitudAgrupada);
   eventBus.on('SOLICITUD_DESCARTADA', onSolicitudDescartada);
   eventBus.on('CAMPANA_ABIERTA', onCampanaAbierta);
+  eventBus.on('COMPRA_ACTUALIZADA', onCompraActualizada);
   eventBus.on('CAMPANA_PROXIMA_A_CERRAR', onCampanaProximaACerrar);
   eventBus.on('CAMPANA_CERRADA', onCampanaCerrada);
   eventBus.on('CAMPANA_CANCELADA', onCampanaCancelada);
@@ -28,22 +28,11 @@ export function registrarListenersNotificaciones() {
   eventBus.on('ENTREGA_DISPONIBLE', onEntregaDisponible);
   eventBus.on('ENTREGA_CONFIRMADA', onEntregaConfirmada);
   eventBus.on('FACTURA_EMITIDA', onFacturaEmitida);
+  eventBus.on('PAGO_DECLARADO', onPagoDeclarado);
+  eventBus.on('PAGO_CONFIRMADO', onPagoConfirmado);
+  eventBus.on('PAGO_RECHAZADO', onPagoRechazado);
 
   logger.info('Listeners de notificaciones registrados');
-}
-
-async function onProductorAprobado({ productorId, usuarioId }) {
-  try {
-    await notificacionesService.crearYEnviar({
-      usuarioId,
-      tipo: 'PRODUCTOR_APROBADO',
-      titulo: 'Tu cuenta fue aprobada',
-      mensaje: 'Ya podés pedir productos y sumarte a las compras colectivas de AUT.',
-      enlaceRelativo: '/perfil'
-    });
-  } catch (err) {
-    logger.error({ err, productorId }, 'Error notificando PRODUCTOR_APROBADO');
-  }
 }
 
 async function onProveedorAprobado({ proveedorId }) {
@@ -69,7 +58,7 @@ async function onSolicitudRecibida({ intencionId, productoId }) {
   try {
     const producto = await prisma.producto.findUnique({ where: { id: productoId } });
     const staffAut = await prisma.usuario.findMany({
-      where: { rol: { in: ['ADMIN', 'OPERADOR'] }, activo: true }
+      where: { rol: 'ADMIN', activo: true }
     });
 
     for (const usuario of staffAut) {
@@ -138,6 +127,27 @@ async function onCampanaAbierta({ campanaId, productoId }) {
     }
   } catch (err) {
     logger.error({ err, campanaId }, 'Error notificando CAMPANA_ABIERTA');
+  }
+}
+
+/** Reenvío manual (M3): el ADMIN pide re-avisar a todos los productores activos. */
+async function onCompraActualizada({ campanaId, productoId }) {
+  try {
+    const campana = await prisma.campana.findUnique({ where: { id: campanaId }, include: { producto: true } });
+    const productores = await productorService.listarAprobados();
+
+    for (const productor of productores) {
+      await notificacionesService.crearYEnviar({
+        usuarioId: productor.usuarioId,
+        tipo: 'COMPRA_ACTUALIZADA',
+        titulo: 'Aviso: compra colectiva abierta',
+        mensaje: `"${campana.nombre}" (${campana.producto.nombre}) sigue abierta. Sumate antes del cierre.`,
+        enlaceRelativo: `/campanas/${campanaId}`,
+        metadatos: { campanaId, productoId }
+      });
+    }
+  } catch (err) {
+    logger.error({ err, campanaId }, 'Error notificando COMPRA_ACTUALIZADA');
   }
 }
 
@@ -230,7 +240,7 @@ function onTandaGenerada({ padreId, hijaId, tipoTanda }) {
 async function onCampanaAdjudicada({ campanaId }) {
   try {
     const campana = await prisma.campana.findUnique({ where: { id: campanaId }, include: { producto: true } });
-    const staffAut = await prisma.usuario.findMany({ where: { rol: { in: ['ADMIN', 'OPERADOR'] }, activo: true } });
+    const staffAut = await prisma.usuario.findMany({ where: { rol: 'ADMIN', activo: true } });
 
     for (const usuario of staffAut) {
       await notificacionesService.crearYEnviar({
@@ -351,6 +361,59 @@ async function onFacturaEmitida({ facturaId, ordenId, productorId, total }) {
     });
   } catch (err) {
     logger.error({ err, facturaId }, 'Error notificando FACTURA_EMITIDA');
+  }
+}
+
+/** El productor declaró un pago: avisa al equipo de AUT para que lo revise y confirme. */
+async function onPagoDeclarado({ pagoId, productorId, montoTotal }) {
+  try {
+    const productor = await productorService.obtenerPorId(productorId);
+    const staffAut = await prisma.usuario.findMany({ where: { rol: 'ADMIN', activo: true } });
+
+    for (const usuario of staffAut) {
+      await notificacionesService.crearYEnviar({
+        usuarioId: usuario.id,
+        tipo: 'PAGO_DECLARADO',
+        titulo: 'Un productor declaró un pago',
+        mensaje: `${productor.razonSocial} declaró un pago de $${Number(montoTotal).toFixed(2)}. Confirmalo cuando veas la plata acreditada.`,
+        enlaceRelativo: '/admin/pagos',
+        metadatos: { pagoId, productorId }
+      });
+    }
+  } catch (err) {
+    logger.error({ err, pagoId }, 'Error notificando PAGO_DECLARADO');
+  }
+}
+
+async function onPagoConfirmado({ pagoId, productorId, montoTotal }) {
+  try {
+    const productor = await productorService.obtenerPorId(productorId);
+    await notificacionesService.crearYEnviar({
+      usuarioId: productor.usuarioId,
+      tipo: 'PAGO_CONFIRMADO',
+      titulo: 'Tu pago fue confirmado',
+      mensaje: `AUT confirmó tu pago de $${Number(montoTotal).toFixed(2)}.`,
+      enlaceRelativo: '/productor/mi-cuenta',
+      metadatos: { pagoId }
+    });
+  } catch (err) {
+    logger.error({ err, pagoId }, 'Error notificando PAGO_CONFIRMADO');
+  }
+}
+
+async function onPagoRechazado({ pagoId, productorId, motivo }) {
+  try {
+    const productor = await productorService.obtenerPorId(productorId);
+    await notificacionesService.crearYEnviar({
+      usuarioId: productor.usuarioId,
+      tipo: 'PAGO_RECHAZADO',
+      titulo: 'Tu pago fue rechazado',
+      mensaje: motivo,
+      enlaceRelativo: '/productor/mi-cuenta',
+      metadatos: { pagoId }
+    });
+  } catch (err) {
+    logger.error({ err, pagoId }, 'Error notificando PAGO_RECHAZADO');
   }
 }
 

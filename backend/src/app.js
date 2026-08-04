@@ -20,6 +20,8 @@ import stockRoutes from './modules/stock/stock.routes.js';
 import entregasRoutes from './modules/entregas/entregas.routes.js';
 import facturasRoutes from './modules/facturas/facturas.routes.js';
 import dashboardRoutes from './modules/dashboard/dashboard.routes.js';
+import remitosRoutes from './modules/remitos/remitos.routes.js';
+import pagosRoutes from './modules/pagos/pagos.routes.js';
 
 const app = express();
 
@@ -43,6 +45,7 @@ app.use('/api/productores', productoresRoutes);
 app.use('/api/proveedores', proveedoresRoutes);
 app.use('/api/productos', productosRoutes);
 app.use('/api/campanas', campanasRoutes);
+app.use('/api/campanas/:campanaId/remitos', remitosRoutes);
 app.use('/api/intenciones', intencionesRoutes);
 app.use('/api/cotizaciones', cotizacionesRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
@@ -53,6 +56,7 @@ app.use('/api/stock-movimientos', stockRoutes);
 app.use('/api/entregas', entregasRoutes);
 app.use('/api/facturas', facturasRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/pagos', pagosRoutes);
 
 // TODO: aquí van los routers del resto de módulos (los va a sumar cada fase)
 

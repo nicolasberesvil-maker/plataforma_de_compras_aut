@@ -54,6 +54,7 @@ export function MovimientosStockPage() {
                 <th className="py-2 px-3">Producto</th>
                 <th className="py-2 px-3">Tipo</th>
                 <th className="py-2 px-3 text-right">Cantidad</th>
+                <th className="py-2 px-3">Orden de compra</th>
                 <th className="py-2 px-3">Ejecutado por</th>
               </tr>
             </thead>
@@ -67,12 +68,15 @@ export function MovimientosStockPage() {
                   <td className={`py-2 px-3 text-sm text-right font-medium ${m.signo < 0 ? 'text-red-600' : 'text-aut-verde'}`}>
                     {m.signo > 0 ? '+' : '-'}{Number(m.cantidad).toLocaleString('es-AR')}
                   </td>
+                  <td className="py-2 px-3 text-sm text-gray-600">
+                    {m.entrega?.ordenCompraId ? `Orden #${m.entrega.ordenCompraId}` : '—'}
+                  </td>
                   <td className="py-2 px-3 text-sm">{m.ejecutadoPor.nombre} {m.ejecutadoPor.apellido}</td>
                 </tr>
               ))}
               {data?.data.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-4 px-3 text-sm text-gray-500 text-center">Sin movimientos</td>
+                  <td colSpan={7} className="py-4 px-3 text-sm text-gray-500 text-center">Sin movimientos</td>
                 </tr>
               )}
             </tbody>

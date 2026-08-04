@@ -93,7 +93,7 @@ export function CampanaFormPage() {
 
   return (
     <div className="max-w-lg space-y-4">
-      <h2 className="text-lg font-bold">{esEdicion ? 'Editar campaña' : 'Nueva campaña'}</h2>
+      <h2 className="text-lg font-bold">{esEdicion ? 'Editar compra' : 'Nueva compra'}</h2>
 
       <form onSubmit={handleSubmit((datos) => guardar.mutate(datos))} className="bg-white border rounded-lg p-4 space-y-3">
         <div>
