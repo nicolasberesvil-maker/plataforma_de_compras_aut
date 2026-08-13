@@ -77,7 +77,7 @@ export function CampanaProductorDetailPage() {
             <span className="text-gray-500">Pedido por el grupo: </span>
             {resumen.volumenAcumulado.toLocaleString('es-AR')} {campana.producto?.unidadMedida}
           </p>
-          <p className="text-xs text-gray-500 mt-1">{resumen.cantidadProductores} productores se sumaron</p>
+          <p className="text-xs text-gray-500 mt-1">{resumen.cantidadProductores} productores se sumaron a este pedido de cotización</p>
         </div>
       )}
 
@@ -98,7 +98,7 @@ export function CampanaProductorDetailPage() {
 
       <div className="bg-white border rounded-lg">
         <h3 className="text-sm font-medium p-4 pb-0">
-          {miIntencion ? 'Tu pedido en esta compra' : 'Sumarme a esta compra'}
+          {miIntencion ? 'Tu pedido en este pedido de cotización' : 'Sumarme a este pedido de cotización'}
         </h3>
         <PedidoForm campana={campana} pedidoExistente={miIntencion} />
       </div>

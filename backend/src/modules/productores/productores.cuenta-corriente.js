@@ -30,6 +30,7 @@ export async function obtenerCuentaCorriente(productorId) {
 
     return {
       ordenCompraId: o.id,
+      fecha: o.createdAt,
       producto: o.adjudicacion.campana.producto.nombre,
       volumenFinal: Number(o.volumenFinal),
       volumenEntregado,

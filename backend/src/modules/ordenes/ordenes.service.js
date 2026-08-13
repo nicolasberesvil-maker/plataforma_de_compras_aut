@@ -4,7 +4,7 @@ import { NotFoundError, ForbiddenError } from '../../utils/errors.js';
 const INCLUDE_DETALLE = {
   productor: true,
   adjudicacion: { include: { campana: { include: { producto: true } } } },
-  entrega: true
+  entrega: { include: { deposito: true } }
 };
 
 export async function listarMias(usuarioId) {

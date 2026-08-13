@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { ClipboardList, DollarSign, History, CreditCard, UserCircle, Menu, LogOut } from 'lucide-react';
+import { ClipboardList, DollarSign, History, Truck, CreditCard, UserCircle, Menu, LogOut } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useLogout } from '../features/auth/hooks/useAuth';
 import { Campanita } from '../features/notificaciones/components/Campanita';
+import { useNotificacionesPorSeccion } from '../features/notificaciones/hooks/useNotificacionesPorSeccion';
 
 const NAV_ITEMS = [
   { to: '/proveedor', label: 'Licitaciones', icon: ClipboardList, end: true },
   { to: '/proveedor/mis-cotizaciones', label: 'Mis cotizaciones', icon: DollarSign },
   { to: '/proveedor/mis-ventas', label: 'Historial de ventas', icon: History },
+  { to: '/proveedor/entregas', label: 'Mis entregas', icon: Truck },
   { to: '/proveedor/mi-cuenta', label: 'Mi cuenta', icon: CreditCard },
   { to: '/perfil', label: 'Perfil', icon: UserCircle }
 ];
@@ -17,6 +19,7 @@ export function PanelProveedorLayout() {
   const usuario = useAuthStore((s) => s.usuario);
   const logout = useLogout();
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
+  const { conteos, marcarSeccionComoLeida } = useNotificacionesPorSeccion('PROVEEDOR');
 
   return (
     <div className="min-h-screen bg-gray-50 md:flex">
@@ -38,7 +41,10 @@ export function PanelProveedorLayout() {
               key={to}
               to={to}
               end={end}
-              onClick={() => setSidebarAbierto(false)}
+              onClick={() => {
+                setSidebarAbierto(false);
+                if (conteos[to] > 0) marcarSeccionComoLeida(to);
+              }}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive ? 'bg-aut-verde/10 text-aut-verde' : 'text-gray-600 hover:bg-gray-100'
@@ -46,7 +52,12 @@ export function PanelProveedorLayout() {
               }
             >
               <Icon size={18} className="shrink-0" />
-              {label}
+              <span className="flex-1">{label}</span>
+              {conteos[to] > 0 && (
+                <span className="bg-aut-naranja text-white text-xs rounded-full min-w-5 h-5 px-1 flex items-center justify-center shrink-0">
+                  {conteos[to] > 9 ? '9+' : conteos[to]}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

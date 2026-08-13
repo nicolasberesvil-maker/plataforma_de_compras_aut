@@ -22,6 +22,18 @@ export async function listarMias(usuarioId) {
   });
 }
 
+/** Entregas de las ventas del proveedor (para que confirme entregas en campo). */
+export async function listarMiasProveedor(usuarioId) {
+  const proveedor = await prisma.proveedor.findUnique({ where: { usuarioId } });
+  if (!proveedor) throw new ForbiddenError();
+
+  return prisma.entrega.findMany({
+    where: { ordenCompra: { adjudicacion: { cotizacionGanadora: { proveedorId: proveedor.id } } } },
+    include: INCLUDE_DETALLE,
+    orderBy: { createdAt: 'desc' }
+  });
+}
+
 export async function listar({ depositoId, estado, page = 1, limit = 20 }) {
   const where = {};
   if (depositoId) where.depositoId = depositoId;
@@ -58,8 +70,12 @@ export async function obtenerPorId(id, usuario) {
   return entrega;
 }
 
-export async function marcarEnTransito(id, datos = {}) {
+export async function marcarEnTransito(id, datos = {}, usuario) {
   const entrega = await obtenerEntregaConValidacion(id, 'EN_TRANSITO');
+
+  if (usuario?.rol === 'PROVEEDOR') {
+    await verificarOwnershipProveedor(id, usuario);
+  }
 
   const actualizada = await prisma.entrega.update({
     where: { id },
@@ -200,6 +216,10 @@ export async function confirmarEntregaCampo(id, datos, usuario) {
     }
   }
 
+  if (usuario.rol === 'PROVEEDOR') {
+    await verificarOwnershipProveedor(id, usuario);
+  }
+
   const actualizada = await prisma.entrega.update({
     where: { id },
     data: {
@@ -242,4 +262,18 @@ async function obtenerEntregaConValidacion(id, estadoNuevo) {
     throw new ConflictError(`No se puede pasar de ${entrega.estado} a ${estadoNuevo}`);
   }
   return entrega;
+}
+
+/** El proveedor solo puede accionar entregas de ventas de sus propias cotizaciones ganadoras. */
+async function verificarOwnershipProveedor(entregaId, usuario) {
+  const proveedor = await prisma.proveedor.findUnique({ where: { usuarioId: usuario.id } });
+  if (!proveedor) throw new ForbiddenError();
+
+  const entrega = await prisma.entrega.findUnique({
+    where: { id: entregaId },
+    include: { ordenCompra: { include: { adjudicacion: { include: { cotizacionGanadora: true } } } } }
+  });
+  if (!entrega || entrega.ordenCompra.adjudicacion.cotizacionGanadora.proveedorId !== proveedor.id) {
+    throw new ForbiddenError('Solo el proveedor dueño de la venta puede confirmarla');
+  }
 }

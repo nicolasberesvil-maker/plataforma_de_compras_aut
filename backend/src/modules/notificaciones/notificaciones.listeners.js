@@ -84,7 +84,7 @@ async function onSolicitudAgrupada({ productorId, campanaId, intencionId }) {
     await notificacionesService.crearYEnviar({
       usuarioId: productor.usuarioId,
       tipo: 'SOLICITUD_AGRUPADA',
-      titulo: 'Tu pedido se sumó a una compra colectiva',
+      titulo: 'Tu pedido se sumó a un pedido de cotización',
       mensaje: `Tu pedido de ${campana.producto.nombre} se incluyó en "${campana.nombre}".`,
       enlaceRelativo: `/campanas/${campanaId}`,
       metadatos: { campanaId, intencionId }
@@ -119,7 +119,7 @@ async function onCampanaAbierta({ campanaId, productoId }) {
       await notificacionesService.crearYEnviar({
         usuarioId: productor.usuarioId,
         tipo: 'CAMPANA_ABIERTA',
-        titulo: 'Nueva compra colectiva abierta',
+        titulo: 'Nuevo pedido de cotización abierto',
         mensaje: `Se abrió "${campana.nombre}" (${campana.producto.nombre}). Sumate antes del cierre.`,
         enlaceRelativo: `/campanas/${campanaId}`,
         metadatos: { campanaId, productoId }
@@ -140,8 +140,8 @@ async function onCompraActualizada({ campanaId, productoId }) {
       await notificacionesService.crearYEnviar({
         usuarioId: productor.usuarioId,
         tipo: 'COMPRA_ACTUALIZADA',
-        titulo: 'Aviso: compra colectiva abierta',
-        mensaje: `"${campana.nombre}" (${campana.producto.nombre}) sigue abierta. Sumate antes del cierre.`,
+        titulo: 'Aviso: pedido de cotización abierto',
+        mensaje: `"${campana.nombre}" (${campana.producto.nombre}) sigue abierto. Sumate antes del cierre.`,
         enlaceRelativo: `/campanas/${campanaId}`,
         metadatos: { campanaId, productoId }
       });
@@ -167,7 +167,7 @@ async function onCampanaProximaACerrar({ campanaId }) {
       await notificacionesService.crearYEnviar({
         usuarioId: productor.usuarioId,
         tipo: 'CAMPANA_PROXIMA_A_CERRAR',
-        titulo: 'Una compra colectiva cierra pronto',
+        titulo: 'Un pedido de cotización cierra pronto',
         mensaje: `"${campana.nombre}" (${campana.producto.nombre}) cierra en menos de 48 hs. Todavía no cargaste tu pedido.`,
         enlaceRelativo: `/campanas/${campanaId}`,
         metadatos: { campanaId }
@@ -191,7 +191,7 @@ async function onCampanaCerrada({ campanaId }) {
       await notificacionesService.crearYEnviar({
         usuarioId: intencion.productor.usuarioId,
         tipo: 'CAMPANA_CERRADA',
-        titulo: 'Tu compra colectiva pasó a licitación',
+        titulo: 'Tu pedido de cotización pasó a licitación',
         mensaje: `"${campana.nombre}" (${campana.producto.nombre}) cerró la carga de pedidos. AUT ya está cotizando con proveedores.`,
         enlaceRelativo: `/campanas/${campanaId}`,
         metadatos: { campanaId }
@@ -214,7 +214,7 @@ async function onCampanaCancelada({ campanaId, motivo }) {
       await notificacionesService.crearYEnviar({
         usuarioId: intencion.productor.usuarioId,
         tipo: 'CAMPANA_CANCELADA',
-        titulo: 'Una compra colectiva fue cancelada',
+        titulo: 'Un pedido de cotización fue cancelado',
         mensaje: `"${campana.nombre}" (${campana.producto.nombre}) se canceló. Motivo: ${motivo}`,
         enlaceRelativo: `/campanas/${campanaId}`,
         metadatos: { campanaId }

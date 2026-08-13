@@ -7,6 +7,13 @@ export async function listarMias(req, res, next) {
   } catch (err) { next(err); }
 }
 
+export async function listarMiasProveedor(req, res, next) {
+  try {
+    const entregas = await entregasService.listarMiasProveedor(req.usuario.id);
+    res.json({ entregas });
+  } catch (err) { next(err); }
+}
+
 export async function listar(req, res, next) {
   try {
     const resultado = await entregasService.listar(req.query);
@@ -23,7 +30,7 @@ export async function obtenerPorId(req, res, next) {
 
 export async function marcarEnTransito(req, res, next) {
   try {
-    const entrega = await entregasService.marcarEnTransito(Number(req.params.id), req.body);
+    const entrega = await entregasService.marcarEnTransito(Number(req.params.id), req.body, req.usuario);
     res.json({ entrega });
   } catch (err) { next(err); }
 }

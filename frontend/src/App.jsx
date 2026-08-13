@@ -34,6 +34,7 @@ import { StockPage } from './features/depositos/pages/StockPage';
 import { EntregasAdminPage } from './features/entregas/pages/EntregasAdminPage';
 import { EntregaDetailPage } from './features/entregas/pages/EntregaDetailPage';
 import { MisEntregasPage } from './features/entregas/pages/MisEntregasPage';
+import { EntregasProveedorPage } from './features/entregas/pages/EntregasProveedorPage';
 import { FacturasAdminPage } from './features/facturas/pages/FacturasAdminPage';
 import { FacturaDetailPage } from './features/facturas/pages/FacturaDetailPage';
 import { MisFacturasPage } from './features/facturas/pages/MisFacturasPage';
@@ -145,6 +146,7 @@ export default function App() {
             <Route path="cotizaciones/:id" element={<CotizacionDetailPage />} />
             <Route path="mis-cotizaciones" element={<MisCotizacionesPage />} />
             <Route path="mis-ventas" element={<MisVentasPage />} />
+            <Route path="entregas" element={<EntregasProveedorPage />} />
             <Route path="mi-cuenta" element={<MiCuentaProveedorPage />} />
           </Route>
         </Routes>

@@ -2,6 +2,7 @@ import { apiClient } from '../../../api/client';
 
 export const entregasApi = {
   listarMias: () => apiClient.get('/entregas/mias').then((r) => r.data),
+  listarMiasProveedor: () => apiClient.get('/entregas/mias-proveedor').then((r) => r.data),
   listar: (filtros = {}) => apiClient.get('/entregas', { params: filtros }).then((r) => r.data),
   obtener: (id) => apiClient.get(`/entregas/${id}`).then((r) => r.data),
   marcarEnTransito: (id, datos = {}) => apiClient.patch(`/entregas/${id}/en-transito`, datos).then((r) => r.data),

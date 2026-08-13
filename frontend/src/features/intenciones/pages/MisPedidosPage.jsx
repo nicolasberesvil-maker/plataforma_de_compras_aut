@@ -15,7 +15,7 @@ export function MisPedidosPage() {
         <div>
           <h2 className="text-lg font-bold">Mis pedidos</h2>
           <p className="text-sm text-gray-500">
-            Lo que fuiste pidiendo, todavía sin convertirse en una compra confirmada. AUT los junta con los de otros productores para negociar mejor precio.
+            Lo que fuiste pidiendo, todavía sin convertirse en una compra confirmada. AUT los junta con los de otros productores en un pedido de cotización para negociar mejor precio con proveedores.
           </p>
         </div>
         <Link to="/productor/pedir" className="bg-aut-verde text-white px-4 py-2 rounded-lg text-sm font-medium shrink-0">

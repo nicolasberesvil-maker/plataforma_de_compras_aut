@@ -10,12 +10,12 @@ export function CampanasAbiertasPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold">Compras abiertas</h2>
+      <h2 className="text-lg font-bold">Pedidos de cotización abiertos</h2>
 
       {isLoading ? (
         <p className="text-gray-500 text-sm">Cargando...</p>
       ) : !data?.data.length ? (
-        <p className="text-gray-500 text-sm">No hay compras colectivas abiertas por ahora.</p>
+        <p className="text-gray-500 text-sm">No hay pedidos de cotización abiertos por ahora.</p>
       ) : (
         <div className="space-y-3">
           {data.data.map((campana) => (

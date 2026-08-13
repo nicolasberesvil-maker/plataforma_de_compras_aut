@@ -7,6 +7,7 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { useLogout } from '../features/auth/hooks/useAuth';
 import { Campanita } from '../features/notificaciones/components/Campanita';
+import { useNotificacionesPorSeccion } from '../features/notificaciones/hooks/useNotificacionesPorSeccion';
 
 const NAV_GROUPS = [
   {
@@ -38,6 +39,7 @@ export function PanelProductorLayout() {
   const usuario = useAuthStore((s) => s.usuario);
   const logout = useLogout();
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
+  const { conteos, marcarSeccionComoLeida } = useNotificacionesPorSeccion('PRODUCTOR');
 
   return (
     <div className="min-h-screen bg-gray-50 md:flex">
@@ -76,7 +78,10 @@ export function PanelProductorLayout() {
                     key={to}
                     to={to}
                     end={end}
-                    onClick={() => setSidebarAbierto(false)}
+                    onClick={() => {
+                      setSidebarAbierto(false);
+                      if (conteos[to] > 0) marcarSeccionComoLeida(to);
+                    }}
                     className={({ isActive }) =>
                       `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                         isActive ? 'bg-aut-verde/10 text-aut-verde' : 'text-gray-600 hover:bg-gray-100'
@@ -84,7 +89,12 @@ export function PanelProductorLayout() {
                     }
                   >
                     <Icon size={18} className="shrink-0" />
-                    {label}
+                    <span className="flex-1">{label}</span>
+                    {conteos[to] > 0 && (
+                      <span className="bg-aut-naranja text-white text-xs rounded-full min-w-5 h-5 px-1 flex items-center justify-center shrink-0">
+                        {conteos[to] > 9 ? '9+' : conteos[to]}
+                      </span>
+                    )}
                   </NavLink>
                 ))}
               </div>
