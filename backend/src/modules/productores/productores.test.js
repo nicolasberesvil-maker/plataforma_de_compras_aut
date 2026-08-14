@@ -129,6 +129,12 @@ describe('GET /api/productores/:id/cuenta-corriente', () => {
     const campanaId = crear.body.campana.id;
     await request(app).post(`/api/campanas/${campanaId}/abrir`).set('Authorization', `Bearer ${adminToken}`);
     await prisma.intencionCompra.create({ data: { campanaId, productorId: productor.id, productoId: producto.id, volumen: 50 } });
+    await request(app).post(`/api/campanas/${campanaId}/requisitos-licitacion`).set('Authorization', `Bearer ${adminToken}`).send({
+      fechaEstimadaRecepcion: new Date(Date.now() + 10 * 86400000).toISOString(),
+      volumenMaximo: 5000,
+      modalidadesEntregaOfrecidas: ['RETIRO_EN_DEPOSITO'],
+      formasPagoOfrecidas: ['TRANSFERENCIA']
+    });
     await request(app).post(`/api/campanas/${campanaId}/cerrar-intenciones`).set('Authorization', `Bearer ${adminToken}`).send({});
 
     const emailProveedor = `proveedor-ctacte-${sufijo}-${run}@test.com`;

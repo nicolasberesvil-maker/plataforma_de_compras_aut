@@ -83,6 +83,12 @@ async function crearCampanaConIntencion(sufijo, { volumen = 100 } = {}) {
     data: { campanaId, productorId: productor.id, productoId, volumen }
   });
 
+  await request(app).post(`/api/campanas/${campanaId}/requisitos-licitacion`).set('Authorization', `Bearer ${adminToken}`).send({
+    fechaEstimadaRecepcion: new Date(Date.now() + 10 * 86400000).toISOString(),
+    volumenMaximo: 5000,
+    modalidadesEntregaOfrecidas: ['RETIRO_EN_DEPOSITO'],
+    formasPagoOfrecidas: ['TRANSFERENCIA']
+  });
   await request(app).post(`/api/campanas/${campanaId}/cerrar-intenciones`).set('Authorization', `Bearer ${adminToken}`).send({});
 
   return { campanaId, productor };

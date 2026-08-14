@@ -11,7 +11,9 @@ export async function listar({ estadoAprobacion, search, page = 1, limit = 20 })
   if (search) {
     where.OR = [
       { razonSocial: { contains: search } },
-      { cuit: { contains: search } }
+      { cuit: { contains: search } },
+      { usuario: { nombre: { contains: search } } },
+      { usuario: { apellido: { contains: search } } }
     ];
   }
 

@@ -32,18 +32,13 @@ export function BandejaPedidosPage() {
 
   const pedidos = data?.data ?? [];
   const seleccionadosData = pedidos.filter((p) => seleccionados.includes(p.id));
-  const productoSeleccionado = seleccionadosData[0]?.productoId;
-  const seleccionValida = seleccionadosData.length > 0 && seleccionadosData.every((p) => p.productoId === productoSeleccionado);
+  const seleccionValida = seleccionadosData.length > 0;
 
-  function toggle(id, productoId) {
-    setSeleccionados((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id);
-      // Solo se puede seleccionar de a un producto por vez (se agrupan juntos).
-      const actuales = pedidos.filter((p) => prev.includes(p.id));
-      if (actuales.length > 0 && actuales[0].productoId !== productoId) return [id];
-      return [...prev, id];
-    });
+  function toggle(id) {
+    setSeleccionados((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
+
+  const productosDistintos = new Set(seleccionadosData.map((p) => p.productoId)).size;
 
   function handleDescartar(id) {
     const motivo = window.prompt('Motivo del descarte (mínimo 5 caracteres):');
@@ -62,20 +57,17 @@ export function BandejaPedidosPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold">Pedidos sueltos</h2>
-          <p className="text-sm text-gray-500">
-            Pedidos que un productor cargó por su cuenta, fuera de una compra colectiva ya abierta. Seleccioná los que sean del mismo producto y agrupalos para armar una compra nueva.
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-gray-500">
+          Pedidos que un productor cargó por su cuenta, fuera de un pedido de cotización ya abierto. Seleccioná los que quieras agrupar en un requerimiento nuevo — pueden ser de más de un producto: si elegís productos distintos, se arma un lote con una campaña por producto.
+        </p>
         {tab === 'bandeja' && (
           <button
             onClick={() => setMostrarModal(true)}
             disabled={!seleccionValida}
-            className="bg-aut-verde text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+            className="bg-aut-verde text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 shrink-0 whitespace-nowrap"
           >
-            Agrupar seleccionados ({seleccionados.length})
+            Agrupar {seleccionados.length} {productosDistintos > 1 ? `(${productosDistintos} productos)` : ''}
           </button>
         )}
       </div>
@@ -120,7 +112,7 @@ export function BandejaPedidosPage() {
                       <input
                         type="checkbox"
                         checked={seleccionados.includes(p.id)}
-                        onChange={() => toggle(p.id, p.productoId)}
+                        onChange={() => toggle(p.id)}
                       />
                     </td>
                     <td className="py-2 px-3 text-sm">{p.producto?.nombre}</td>

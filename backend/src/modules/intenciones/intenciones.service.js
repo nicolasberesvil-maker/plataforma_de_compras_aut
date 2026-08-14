@@ -208,61 +208,79 @@ export async function descartar(id, motivo) {
 }
 
 /**
- * EL CORAZÓN DEL CAMINO BOTTOM-UP: agrupa N pedidos sueltos (mismo producto)
- * en una Campana COLECTIVA nueva. Todo en una transacción: si falla a mitad
- * de camino no queremos pedidos marcados AGRUPADA sin una campaña real
- * detrás (regla de oro de transacciones Prisma).
+ * EL CORAZÓN DEL CAMINO BOTTOM-UP: agrupa N pedidos sueltos en una o más
+ * Campana COLECTIVA nuevas. Si los pedidos seleccionados son de más de un
+ * producto distinto, primero se crea un Lote (agrupador organizacional/
+ * visual, sin ciclo de vida propio) y se crea una Campana por producto,
+ * todas ligadas a ese Lote — adjudicación, orden, entrega, factura y pago
+ * siguen siendo estrictamente por producto/Campana, el Lote no participa en
+ * nada de eso. Todo en una transacción: si falla a mitad de camino no
+ * queremos pedidos marcados AGRUPADA sin una campaña real detrás (regla de
+ * oro de transacciones Prisma).
  */
 export async function agrupar(datos, usuario) {
-  const { intencionIds, nombre, fechaCierre, fechaEstimadaRecepcion, volumenMinimo, volumenMaximo, horasLockoutEdicion } = datos;
+  const { intencionIds, nombre, fechaCierre, fechaEstimadaRecepcion, horasLockoutEdicion, volumenesPorProducto = [] } = datos;
 
   const resultado = await prisma.$transaction(async (tx) => {
     const intenciones = await tx.intencionCompra.findMany({
-      where: { id: { in: intencionIds }, campanaId: null, estado: 'PENDIENTE' }
+      where: { id: { in: intencionIds }, campanaId: null, estado: 'PENDIENTE' },
+      include: { producto: true }
     });
     if (intenciones.length !== intencionIds.length) {
       throw new ValidationError('Algún pedido no existe, ya tiene campaña o no está PENDIENTE');
     }
 
-    const productoId = intenciones[0].productoId;
-    if (intenciones.some((i) => i.productoId !== productoId)) {
-      throw new ValidationError('Todos los pedidos agrupados deben ser del mismo producto');
+    const productoIds = [...new Set(intenciones.map((i) => i.productoId))];
+    const esLote = productoIds.length > 1;
+    const lote = esLote
+      ? await tx.lote.create({ data: { nombre, creadaPorId: usuario.id } })
+      : null;
+
+    const campanas = [];
+    for (const productoId of productoIds) {
+      const producto = intenciones.find((i) => i.productoId === productoId).producto;
+      const vol = volumenesPorProducto.find((v) => v.productoId === productoId);
+
+      const campana = await tx.campana.create({
+        data: {
+          productoId,
+          loteId: lote?.id ?? null,
+          tipo: 'COLECTIVA',
+          nombre: esLote ? `${nombre} — ${producto.nombre}` : nombre,
+          volumenMinimo: vol?.volumenMinimo ?? null,
+          volumenMaximo: vol?.volumenMaximo ?? null,
+          fechaApertura: new Date(),
+          fechaCierre,
+          fechaEstimadaRecepcion: fechaEstimadaRecepcion ?? null,
+          horasLockoutEdicion: horasLockoutEdicion ?? 0,
+          estado: 'ABIERTA', // nace ABIERTA: los pedidos sueltos YA son voluntad de compra
+          creadaPorId: usuario.id
+        }
+      });
+      campanas.push(campana);
+
+      await tx.intencionCompra.updateMany({
+        where: { id: { in: intenciones.filter((i) => i.productoId === productoId).map((i) => i.id) } },
+        data: { campanaId: campana.id, estado: 'AGRUPADA' }
+      });
     }
 
-    const campana = await tx.campana.create({
-      data: {
-        productoId,
-        tipo: 'COLECTIVA',
-        nombre,
-        volumenMinimo: volumenMinimo ?? null,
-        volumenMaximo: volumenMaximo ?? null,
-        fechaApertura: new Date(),
-        fechaCierre,
-        fechaEstimadaRecepcion: fechaEstimadaRecepcion ?? null,
-        horasLockoutEdicion: horasLockoutEdicion ?? 0,
-        estado: 'ABIERTA', // nace ABIERTA: los pedidos sueltos YA son voluntad de compra
-        creadaPorId: usuario.id
-      }
-    });
-
-    await tx.intencionCompra.updateMany({
-      where: { id: { in: intencionIds } },
-      data: { campanaId: campana.id, estado: 'AGRUPADA' }
-    });
-
-    return { campana, intenciones };
+    return { lote, campanas, intenciones };
   });
 
-  eventBus.emit('CAMPANA_ABIERTA', { campanaId: resultado.campana.id, productoId: resultado.campana.productoId });
+  for (const campana of resultado.campanas) {
+    eventBus.emit('CAMPANA_ABIERTA', { campanaId: campana.id, productoId: campana.productoId });
+  }
   for (const intencion of resultado.intenciones) {
+    const campana = resultado.campanas.find((c) => c.productoId === intencion.productoId);
     eventBus.emit('SOLICITUD_AGRUPADA', {
       intencionId: intencion.id,
       productorId: intencion.productorId,
-      campanaId: resultado.campana.id
+      campanaId: campana.id
     });
   }
 
-  return resultado.campana;
+  return { lote: resultado.lote, campanas: resultado.campanas };
 }
 
 /**

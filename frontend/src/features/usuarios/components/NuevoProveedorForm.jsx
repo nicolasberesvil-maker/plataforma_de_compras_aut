@@ -23,11 +23,9 @@ export function NuevoProveedorForm({ onSubmit, isLoading, resultado }) {
   return (
     <form
       onSubmit={handleSubmit((datos) => onSubmit(datos, reset))}
-      className="bg-white border rounded-lg p-4 space-y-3 max-w-lg"
+      className="space-y-3"
     >
-      <h3 className="font-bold">Nuevo proveedor</h3>
-
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-sm font-medium mb-1">Usuario</label>
           <input {...register('username')} className="w-full border rounded-lg px-3 py-2 text-sm" />

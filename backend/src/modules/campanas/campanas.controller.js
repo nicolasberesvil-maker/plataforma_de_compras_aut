@@ -49,6 +49,13 @@ export async function cerrarIntenciones(req, res, next) {
   } catch (err) { next(err); }
 }
 
+export async function completarRequisitosLicitacion(req, res, next) {
+  try {
+    const campana = await campanasService.completarRequisitosLicitacion(Number(req.params.id), req.body);
+    res.json({ campana });
+  } catch (err) { next(err); }
+}
+
 export async function adjudicarDirecta(req, res, next) {
   try {
     const campana = await campanasService.adjudicarDirecta(Number(req.params.id), req.body, req.usuario);

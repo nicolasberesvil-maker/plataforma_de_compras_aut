@@ -4,14 +4,17 @@ import { NotFoundError, ConflictError, ForbiddenError } from '../../utils/errors
 
 const BCRYPT_COST = 12;
 
-export async function listar({ search, page = 1, limit = 20 }) {
+export async function listar({ search, estado, page = 1, limit = 20 }) {
   const where = {};
   if (search) {
     where.OR = [
       { razonSocial: { contains: search } },
-      { cuit: { contains: search } }
+      { cuit: { contains: search } },
+      { usuario: { nombre: { contains: search } } },
+      { usuario: { apellido: { contains: search } } }
     ];
   }
+  if (estado) where.usuario = { ...where.usuario, activo: estado === 'ACTIVO' };
 
   const [data, total] = await Promise.all([
     prisma.productor.findMany({

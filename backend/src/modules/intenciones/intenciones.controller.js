@@ -51,8 +51,8 @@ export async function descartar(req, res, next) {
 
 export async function agrupar(req, res, next) {
   try {
-    const campana = await intencionesService.agrupar(req.body, req.usuario);
-    res.status(201).json({ campana });
+    const resultado = await intencionesService.agrupar(req.body, req.usuario);
+    res.status(201).json(resultado); // { lote, campanas }
   } catch (err) { next(err); }
 }
 

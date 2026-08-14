@@ -8,6 +8,7 @@ import { EstadoBadge } from '../components/EstadoBadge';
 import { CotizacionEstadoBadge } from '../components/CotizacionEstadoBadge';
 import { ProgresoVolumen } from '../components/ProgresoVolumen';
 import { AccionesCampana } from '../components/AccionesCampana';
+import { RequisitosLicitacionForm } from '../components/RequisitosLicitacionForm';
 import { OrdenesTab } from '../components/OrdenesTab';
 import { RemitosTab } from '../components/RemitosTab';
 import { BackButton } from '../../../components/BackButton';
@@ -67,37 +68,47 @@ export function CampanaDetailPage() {
   const campana = data.campana;
   const resumen = resumenData?.resumen;
   const tieneVolumenMinimo = campana.volumenMinimo && Number(campana.volumenMinimo) > 0;
+  const faltanRequisitos = campana.estado === 'ABIERTA' && (
+    !campana.fechaEstimadaRecepcion || !campana.volumenMaximo ||
+    !campana.modalidadesEntregaOfrecidas || !campana.formasPagoOfrecidas
+  );
 
   return (
     <div className="max-w-2xl space-y-4">
-      <BackButton to="/admin/campanas" />
+      <BackButton to="/admin/pedidos" />
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-lg font-bold">{campana.nombre}</h2>
             <TipoBadge tipo={campana.tipo} />
             <EstadoBadge estado={campana.estado} />
             <CotizacionEstadoBadge campana={campana} />
           </div>
           <p className="text-sm text-gray-600">{campana.producto?.nombre}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {campana.estado === 'ABIERTA' && (
-            <button
-              onClick={() => avisarProductores.mutate()}
-              disabled={avisarProductores.isPending}
-              className="text-sm text-aut-verde font-medium disabled:opacity-50"
-            >
-              {avisarProductores.isPending ? 'Avisando...' : avisarProductores.isSuccess ? 'Aviso enviado ✓' : 'Avisar a productores'}
-            </button>
-          )}
-          {campana.estado === 'BORRADOR' && (
-            <Link to={`/admin/campanas/${campana.id}/editar`} className="text-aut-verde text-sm font-medium">
-              Editar
+          {campana.lote && (
+            <Link to={`/admin/resumen?loteId=${campana.lote.id}`} className="text-xs text-purple-700 font-medium">
+              Parte del lote: {campana.lote.nombre}
             </Link>
           )}
         </div>
+        {campana.estado === 'BORRADOR' && (
+          <Link to={`/admin/campanas/${campana.id}/editar`} className="text-aut-verde text-sm font-medium">
+            Editar
+          </Link>
+        )}
       </div>
+
+      {faltanRequisitos && <RequisitosLicitacionForm campana={campana} />}
+
+      {campana.estado === 'ABIERTA' && (
+        <button
+          onClick={() => avisarProductores.mutate()}
+          disabled={avisarProductores.isPending}
+          className="w-full bg-aut-verde text-white py-3 rounded-lg text-sm font-semibold disabled:opacity-50"
+        >
+          {avisarProductores.isPending ? 'Avisando...' : avisarProductores.isSuccess ? 'Aviso enviado ✓' : 'Avisar a productores'}
+        </button>
+      )}
 
       <div className="bg-white border rounded-lg p-4 space-y-3">
         {campana.descripcion && <p className="text-sm text-gray-700">{campana.descripcion}</p>}

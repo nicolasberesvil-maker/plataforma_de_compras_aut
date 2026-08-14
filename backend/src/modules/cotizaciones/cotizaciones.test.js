@@ -55,6 +55,12 @@ async function crearCampanaEnLicitacion(sufijo) {
     });
   const id = crear.body.campana.id;
   await request(app).post(`/api/campanas/${id}/abrir`).set('Authorization', `Bearer ${adminToken}`);
+  await request(app).post(`/api/campanas/${id}/requisitos-licitacion`).set('Authorization', `Bearer ${adminToken}`).send({
+    fechaEstimadaRecepcion: new Date(Date.now() + 10 * 86400000).toISOString(),
+    volumenMaximo: 5000,
+    modalidadesEntregaOfrecidas: ['RETIRO_EN_DEPOSITO'],
+    formasPagoOfrecidas: ['TRANSFERENCIA']
+  });
   await request(app).post(`/api/campanas/${id}/cerrar-intenciones`).set('Authorization', `Bearer ${adminToken}`).send({});
   return id;
 }

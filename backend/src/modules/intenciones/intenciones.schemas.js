@@ -48,7 +48,11 @@ export const descartarIntencionSchema = z.object({
   motivo: z.string().min(5).max(500)
 });
 
-// Agrupar N pedidos sueltos (mismo producto) en una Campana COLECTIVA nueva.
+// Agrupar N pedidos sueltos en una o más Campana COLECTIVA nuevas. Si los
+// pedidos seleccionados son de más de un producto distinto, se crea un Lote
+// (agrupador visual) y una Campana por producto — ver intenciones.service.js
+// agrupar(). volumenMinimo/volumenMaximo son por producto porque las
+// unidades no son comparables entre productos distintos (litros vs. bolsas).
 // fechaCierre viene pre-cargada en el frontend a "ahora + 48hs" (sugerencia
 // del negocio, DECISIONES-PENDIENTES.md #3) pero es editable acá.
 export const agruparIntencionesSchema = z.object({
@@ -56,9 +60,12 @@ export const agruparIntencionesSchema = z.object({
   nombre: z.string().min(3).max(150),
   fechaCierre: z.coerce.date(),
   fechaEstimadaRecepcion: z.coerce.date().optional(),
-  volumenMinimo: z.number().positive().optional(),
-  volumenMaximo: z.number().positive().optional(),
-  horasLockoutEdicion: z.number().int().nonnegative().default(0)
+  horasLockoutEdicion: z.number().int().nonnegative().default(0),
+  volumenesPorProducto: z.array(z.object({
+    productoId: z.number().int().positive(),
+    volumenMinimo: z.number().positive().optional(),
+    volumenMaximo: z.number().positive().optional()
+  })).optional()
 });
 
 export const filtrosIntencionSchema = z.object({

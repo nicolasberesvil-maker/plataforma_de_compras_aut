@@ -9,34 +9,41 @@ import { CotizacionEstadoBadge } from '../components/CotizacionEstadoBadge';
 const TIPOS = ['COLECTIVA', 'DIRECTA', 'CONTINUA'];
 const ESTADOS = ['BORRADOR', 'ABIERTA', 'EN_LICITACION', 'ADJUDICADA', 'CERRADA', 'CANCELADA'];
 
-export function CampanasListPage() {
+// vista: si viene ('agrupadas' | 'concretadas'), esta lista es una de las
+// pestañas de PedidosAdminPage — el filtro de estado queda fijo y se oculta,
+// el backend ya filtra por vista (ver campanas.service.js listar()).
+export function CampanasListPage({ vista }) {
   const [tipo, setTipo] = useState('');
   const [estado, setEstado] = useState('');
   const [page, setPage] = useState(1);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['campanas', { tipo, estado, page }],
-    queryFn: () => campanasApi.listar({ tipo: tipo || undefined, estado: estado || undefined, page })
+    queryKey: ['campanas', { tipo, estado, vista, page }],
+    queryFn: () => campanasApi.listar({ tipo: tipo || undefined, estado: vista ? undefined : (estado || undefined), vista, page })
   });
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">Compras</h2>
-        <Link to="/admin/campanas/nueva" className="bg-aut-verde text-white px-4 py-2 rounded-lg text-sm font-medium">
-          Nueva compra
-        </Link>
-      </div>
+      {!vista && (
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold">Compras</h2>
+          <Link to="/admin/campanas/nueva" className="bg-aut-verde text-white px-4 py-2 rounded-lg text-sm font-medium">
+            Nueva compra
+          </Link>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-3">
         <select value={tipo} onChange={(e) => { setTipo(e.target.value); setPage(1); }} className="border rounded-lg px-3 py-2 text-sm">
           <option value="">Todos los tipos</option>
           {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
-        <select value={estado} onChange={(e) => { setEstado(e.target.value); setPage(1); }} className="border rounded-lg px-3 py-2 text-sm">
-          <option value="">Todos los estados</option>
-          {ESTADOS.map((e) => <option key={e} value={e}>{e}</option>)}
-        </select>
+        {!vista && (
+          <select value={estado} onChange={(e) => { setEstado(e.target.value); setPage(1); }} className="border rounded-lg px-3 py-2 text-sm">
+            <option value="">Todos los estados</option>
+            {ESTADOS.map((e) => <option key={e} value={e}>{e}</option>)}
+          </select>
+        )}
       </div>
 
       {isLoading ? (
@@ -48,6 +55,7 @@ export function CampanasListPage() {
               <tr className="border-b text-left text-xs text-gray-500 uppercase">
                 <th className="py-2 px-3">Nombre</th>
                 <th className="py-2 px-3">Producto</th>
+                <th className="py-2 px-3">Lote</th>
                 <th className="py-2 px-3">Tipo</th>
                 <th className="py-2 px-3">Estado</th>
                 <th className="py-2 px-3">Cierre</th>
@@ -59,6 +67,7 @@ export function CampanasListPage() {
                 <tr key={campana.id} className="border-b">
                   <td className="py-2 px-3 text-sm">{campana.nombre}</td>
                   <td className="py-2 px-3 text-sm">{campana.producto?.nombre}</td>
+                  <td className="py-2 px-3 text-sm text-gray-600">{campana.lote?.nombre ?? 'Individual'}</td>
                   <td className="py-2 px-3"><TipoBadge tipo={campana.tipo} /></td>
                   <td className="py-2 px-3">
                     <div className="flex flex-col gap-1 items-start">

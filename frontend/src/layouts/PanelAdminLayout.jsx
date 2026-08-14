@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCircle, Building2, Package, Megaphone,
-  Inbox, Warehouse, Receipt, Wallet, Menu, LogOut
+  ClipboardList, Warehouse, Receipt, Wallet, Menu, LogOut
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useLogout } from '../features/auth/hooks/useAuth';
@@ -14,8 +14,8 @@ const NAV_ITEMS = [
   { to: '/admin/productores', label: 'Productores', icon: UserCircle },
   { to: '/admin/proveedores', label: 'Proveedores', icon: Building2 },
   { to: '/admin/productos', label: 'Productos', icon: Package },
-  { to: '/admin/campanas', label: 'Compras', icon: Megaphone },
-  { to: '/admin/solicitudes', label: 'Pedidos sueltos', icon: Inbox },
+  { to: '/admin/pedidos', label: 'Pedidos', icon: Megaphone },
+  { to: '/admin/resumen', label: 'Resumen', icon: ClipboardList },
   { to: '/admin/stock', label: 'Stock', icon: Warehouse },
   { to: '/admin/facturas', label: 'Facturas', icon: Receipt },
   { to: '/admin/pagos', label: 'Pagos', icon: Wallet }

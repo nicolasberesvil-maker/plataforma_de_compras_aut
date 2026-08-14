@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const listarProductoresSchema = z.object({
   search: z.string().optional(),
+  estado: z.enum(['ACTIVO', 'INACTIVO']).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20)
 });

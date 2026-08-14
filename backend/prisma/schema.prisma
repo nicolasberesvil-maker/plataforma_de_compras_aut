@@ -40,6 +40,7 @@ model Usuario {
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
   campanasCreadas     Campana[]            @relation("CampanasCreadas")
+  lotesCreados        Lote[]               @relation("LotesCreados")
   notificaciones      Notificacion[]
   movimientosStockEjecutados StockMovimiento[]
   pagosProveedorRegistrados PagoProveedor[]
@@ -270,6 +271,21 @@ model Campana {
   campanaPadre   Campana?  @relation("CampanaTandas", fields: [campanaPadreId], references: [id])
   tandas         Campana[] @relation("CampanaTandas")
 
+  // Agrupador organizacional/visual cuando esta campaña nació junto con otras
+  // de productos distintos en un mismo requerimiento (ver model Lote). Nunca
+  // afecta adjudicación/orden/entrega/factura/pago, que siguen siendo 1:1 con
+  // esta Campana.
+  loteId Int?  @map("lote_id")
+  lote   Lote? @relation(fields: [loteId], references: [id])
+
+  // Condiciones que AUT ofrece/exige para esta compra puntual. Se completan
+  // antes de poder pasar a EN_LICITACION (ver campanas.service.js
+  // cerrarIntenciones). Mismo patrón Json que
+  // IntencionCompra.formasPagoPreferidas: array de valores del enum
+  // existente, sin tabla intermedia.
+  modalidadesEntregaOfrecidas Json? @map("modalidades_entrega_ofrecidas")
+  formasPagoOfrecidas         Json? @map("formas_pago_ofrecidas")
+
   // Horas antes del cierre en que se bloquea la edición de intenciones.
   horasLockoutEdicion Int @default(0) @map("horas_lockout_edicion")
 
@@ -289,7 +305,28 @@ model Campana {
 
   @@index([estado])
   @@index([fechaCierre])
+  @@index([loteId])
   @@map("campanas")
+}
+
+// Agrupador organizacional/visual, sin estado propio ni ciclo de vida de
+// aprobación. Se crea implícitamente cuando el ADMIN agrupa pedidos sueltos
+// de más de un producto distinto a la vez (intenciones.service.js agrupar()).
+// Por dentro cada producto sigue siendo su propia Campana independiente.
+model Lote {
+  id          Int     @id @default(autoincrement())
+  nombre      String
+  descripcion String? @db.Text
+
+  creadaPorId Int     @map("creada_por_id")
+  creadaPor   Usuario @relation("LotesCreados", fields: [creadaPorId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  campanas Campana[]
+
+  @@map("lotes")
 }
 
 enum EstadoCampana {

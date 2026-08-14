@@ -136,6 +136,23 @@ describe('Transiciones COLECTIVA', () => {
       .send({ proveedorId: 1, precioUnitario: 100, plazoEntregaDias: 5, condicionesPago: 'Contado' });
     expect(adjudicarDirecto.status).toBe(409);
 
+    const sinRequisitos = await request(app)
+      .post(`/api/campanas/${id}/cerrar-intenciones`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+    expect(sinRequisitos.status).toBe(400);
+
+    const requisitos = await request(app)
+      .post(`/api/campanas/${id}/requisitos-licitacion`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        fechaEstimadaRecepcion: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+        volumenMaximo: 5000,
+        modalidadesEntregaOfrecidas: ['RETIRO_EN_DEPOSITO'],
+        formasPagoOfrecidas: ['TRANSFERENCIA']
+      });
+    expect(requisitos.status).toBe(200);
+
     const cerrar = await request(app)
       .post(`/api/campanas/${id}/cerrar-intenciones`)
       .set('Authorization', `Bearer ${adminToken}`)

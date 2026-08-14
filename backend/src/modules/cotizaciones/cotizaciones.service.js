@@ -28,7 +28,7 @@ export async function listarCampanasParaCotizar(usuarioId) {
       estado: 'EN_LICITACION',
       OR: [{ fechaCierreCotizaciones: null }, { fechaCierreCotizaciones: { gt: new Date() } }]
     },
-    include: { producto: true }
+    include: { producto: true, lote: true }
   });
 
   return Promise.all(campanas.map(async (campana) => {
@@ -47,6 +47,8 @@ export async function listarCampanasParaCotizar(usuarioId) {
       nombre: campana.nombre,
       descripcion: campana.descripcion,
       producto: campana.producto,
+      loteId: campana.loteId,
+      lote: campana.lote,
       volumenConsolidado: Number(stats._sum.volumen ?? 0),
       cantidadProductores: stats._count,
       fechaCierreCotizaciones: campana.fechaCierreCotizaciones,
@@ -88,12 +90,7 @@ export async function obtenerPorId(id, usuario) {
   return cotizacion;
 }
 
-export async function crear(datos, usuarioId) {
-  const proveedor = await obtenerProveedorDelUsuario(usuarioId);
-  if (proveedor.estadoAprobacion !== 'APROBADO') {
-    throw new ForbiddenError('Proveedor no aprobado');
-  }
-
+async function crearUna(datos, proveedor) {
   const campana = await prisma.campana.findUnique({ where: { id: datos.campanaId } });
   if (!campana) throw new NotFoundError('Campaña');
   if (campana.estado !== 'EN_LICITACION') {
@@ -108,7 +105,7 @@ export async function crear(datos, usuarioId) {
   });
   if (existente) throw new ConflictError('Ya cotizaste esta campaña. Editá la existente.');
 
-  const cotizacion = await prisma.cotizacion.create({
+  return prisma.cotizacion.create({
     data: {
       campanaId: campana.id,
       proveedorId: proveedor.id,
@@ -122,14 +119,53 @@ export async function crear(datos, usuarioId) {
     },
     include: { campana: { include: { producto: true } } }
   });
+}
+
+export async function crear(datos, usuarioId) {
+  const proveedor = await obtenerProveedorDelUsuario(usuarioId);
+  if (proveedor.estadoAprobacion !== 'APROBADO') {
+    throw new ForbiddenError('Proveedor no aprobado');
+  }
+
+  const cotizacion = await crearUna(datos, proveedor);
 
   eventBus.emit('COTIZACION_RECIBIDA', {
     cotizacionId: cotizacion.id,
-    campanaId: campana.id,
+    campanaId: cotizacion.campanaId,
     proveedorId: proveedor.id
   });
 
   return cotizacion;
+}
+
+/**
+ * Cotiza N campañas de un lote en un solo llamado. Best-effort por ítem, no
+ * todo-o-nada: cada Cotizacion es independiente bajo el
+ * @@unique([campanaId, proveedorId]) existente, así que si un producto ya
+ * fue cotizado o su campaña venció no debe bloquear al resto del lote.
+ */
+export async function crearLote(datos, usuarioId) {
+  const proveedor = await obtenerProveedorDelUsuario(usuarioId);
+  if (proveedor.estadoAprobacion !== 'APROBADO') {
+    throw new ForbiddenError('Proveedor no aprobado');
+  }
+
+  const creadas = [];
+  const errores = [];
+  for (const item of datos.items) {
+    try {
+      const cotizacion = await crearUna({ ...datos, campanaId: item.campanaId, precioUnitario: item.precioUnitario }, proveedor);
+      creadas.push(cotizacion);
+    } catch (err) {
+      errores.push({ campanaId: item.campanaId, motivo: err.message });
+    }
+  }
+
+  for (const c of creadas) {
+    eventBus.emit('COTIZACION_RECIBIDA', { cotizacionId: c.id, campanaId: c.campanaId, proveedorId: proveedor.id });
+  }
+
+  return { creadas, errores };
 }
 
 export async function actualizar(id, datos, usuarioId) {

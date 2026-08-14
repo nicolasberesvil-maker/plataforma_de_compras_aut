@@ -151,7 +151,7 @@ describe('PATCH/DELETE /api/intenciones/:id — pedido suelto', () => {
 });
 
 describe('POST /api/intenciones/agrupar', () => {
-  it('agrupa 2 pedidos sueltos del mismo producto en 1 Campana ABIERTA', async () => {
+  it('agrupa 2 pedidos sueltos del mismo producto en 1 Campana ABIERTA, sin Lote', async () => {
     const { token: token2 } = await crearProductor('agrupar-2');
     const pedido1 = await crearPedido(tokenPrincipal, { volumen: 300 });
     const pedido2 = await crearPedido(token2, { volumen: 300 });
@@ -166,14 +166,16 @@ describe('POST /api/intenciones/agrupar', () => {
       });
 
     expect(res.status).toBe(201);
-    expect(res.body.campana.estado).toBe('ABIERTA');
+    expect(res.body.lote).toBeNull();
+    expect(res.body.campanas).toHaveLength(1);
+    expect(res.body.campanas[0].estado).toBe('ABIERTA');
 
     const intencion1 = await prisma.intencionCompra.findUnique({ where: { id: pedido1.body.intencion.id } });
     expect(intencion1.estado).toBe('AGRUPADA');
-    expect(intencion1.campanaId).toBe(res.body.campana.id);
+    expect(intencion1.campanaId).toBe(res.body.campanas[0].id);
   });
 
-  it('rechaza agrupar pedidos de productos distintos → 400', async () => {
+  it('agrupa pedidos de productos distintos en 1 Lote con 1 Campana por producto', async () => {
     const otroProducto = await prisma.producto.create({
       data: { nombre: `Producto Otro ${run}`, categoria: 'FERTILIZANTE', unidadMedida: 'KILO', alicuotaIva: 21 }
     });
@@ -190,10 +192,16 @@ describe('POST /api/intenciones/agrupar', () => {
         fechaCierre: new Date(Date.now() + 5 * 86400000).toISOString()
       });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
+    expect(res.body.lote).not.toBeNull();
+    expect(res.body.campanas).toHaveLength(2);
+    expect(res.body.campanas.every((c) => c.loteId === res.body.lote.id)).toBe(true);
+    expect(new Set(res.body.campanas.map((c) => c.productoId)).size).toBe(2);
 
     await prisma.intencionCompra.deleteMany({ where: { productoId: otroProducto.id } });
+    await prisma.campana.deleteMany({ where: { productoId: otroProducto.id } });
     await prisma.producto.delete({ where: { id: otroProducto.id } });
+    await prisma.lote.delete({ where: { id: res.body.lote.id } });
   });
 
   it('rechaza agrupar un pedido ya AGRUPADA → 400', async () => {

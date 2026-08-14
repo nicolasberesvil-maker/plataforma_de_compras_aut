@@ -60,6 +60,11 @@ export function CampanaProductorDetailPage() {
       <div>
         <h2 className="text-lg font-bold">{campana.nombre}</h2>
         <p className="text-sm text-gray-600">{campana.producto?.nombre}</p>
+        {campana.lote && (
+          <span className="inline-block mt-1 text-xs font-medium bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
+            Parte del lote: {campana.lote.nombre}
+          </span>
+        )}
       </div>
 
       {tieneVolumenMinimo && resumen ? (

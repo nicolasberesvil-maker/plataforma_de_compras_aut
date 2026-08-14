@@ -17,9 +17,11 @@ import { CampanasAbiertasPage } from './features/campanas/pages/CampanasAbiertas
 import { PedirProductoPage } from './features/intenciones/pages/PedirProductoPage';
 import { MisPedidosPage } from './features/intenciones/pages/MisPedidosPage';
 import { CampanaProductorDetailPage } from './features/intenciones/pages/CampanaProductorDetailPage';
-import { BandejaPedidosPage } from './features/intenciones/pages/BandejaPedidosPage';
+import { PedidosAdminPage } from './features/pedidos/pages/PedidosAdminPage';
+import { ResumenPedidosAdminPage } from './features/resumen/pages/ResumenPedidosAdminPage';
 import { CampanasParaCotizarPage } from './features/cotizaciones/pages/CampanasParaCotizarPage';
 import { CotizacionFormPage } from './features/cotizaciones/pages/CotizacionFormPage';
+import { CotizacionLoteFormPage } from './features/cotizaciones/pages/CotizacionLoteFormPage';
 import { CotizacionDetailPage } from './features/cotizaciones/pages/CotizacionDetailPage';
 import { MisCotizacionesPage } from './features/cotizaciones/pages/MisCotizacionesPage';
 import { ComparadorPage } from './features/adjudicaciones/pages/ComparadorPage';
@@ -93,12 +95,14 @@ export default function App() {
             <Route path="productos" element={<ProductosListPage />} />
             <Route path="productos/nuevo" element={<ProductoFormPage />} />
             <Route path="productos/:id/editar" element={<ProductoFormPage />} />
-            <Route path="campanas" element={<CampanasListPage />} />
+            <Route path="pedidos" element={<PedidosAdminPage />} />
+            <Route path="resumen" element={<ResumenPedidosAdminPage />} />
+            <Route path="campanas" element={<Navigate to="/admin/pedidos" replace />} />
+            <Route path="solicitudes" element={<Navigate to="/admin/pedidos" replace />} />
             <Route path="campanas/nueva" element={<CampanaFormPage />} />
             <Route path="campanas/:id" element={<CampanaDetailPage />} />
             <Route path="campanas/:id/editar" element={<CampanaFormPage />} />
             <Route path="campanas/:id/comparador" element={<ComparadorPage />} />
-            <Route path="solicitudes" element={<BandejaPedidosPage />} />
             <Route path="stock" element={<StockPage />} />
             <Route path="depositos" element={<DepositosListPage />} />
             <Route path="depositos/nuevo" element={<DepositoFormPage />} />
@@ -143,6 +147,7 @@ export default function App() {
           >
             <Route index element={<CampanasParaCotizarPage />} />
             <Route path="campanas/:id/cotizar" element={<CotizacionFormPage />} />
+            <Route path="lotes/:loteId/cotizar" element={<CotizacionLoteFormPage />} />
             <Route path="cotizaciones/:id" element={<CotizacionDetailPage />} />
             <Route path="mis-cotizaciones" element={<MisCotizacionesPage />} />
             <Route path="mis-ventas" element={<MisVentasPage />} />

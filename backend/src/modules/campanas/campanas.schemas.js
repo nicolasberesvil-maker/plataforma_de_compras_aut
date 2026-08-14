@@ -23,8 +23,27 @@ export const filtrosCampanaSchema = z.object({
   estado: z.enum(['BORRADOR', 'ABIERTA', 'EN_LICITACION', 'ADJUDICADA', 'CERRADA', 'CANCELADA']).optional(),
   tipo: z.enum(['COLECTIVA', 'DIRECTA', 'CONTINUA']).optional(),
   productoId: z.coerce.number().int().positive().optional(),
+  loteId: z.coerce.number().int().positive().optional(),
+  // "agrupadas" = todavía no es una compra concretada (ABIERTA/EN_LICITACION/
+  // ADJUDICADA); "concretadas" = ya hay orden generada (CERRADA). Atajo para
+  // las pestañas de PedidosAdminPage sin repetir la lista de estados ahí.
+  vista: z.enum(['agrupadas', 'concretadas']).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20)
+});
+
+const MODALIDAD_ENTREGA = ['RETIRO_EN_DEPOSITO', 'ENTREGA_EN_CAMPO'];
+const FORMA_PAGO = ['TRANSFERENCIA', 'ECHEQ_CORRIENTE', 'ECHEQ_PLAZO', 'TARJETA_AGRO', 'CANJE_CEREAL', 'CUENTA_CORRIENTE', 'EFECTIVO'];
+
+// Condiciones que AUT tiene que dejar completas antes de poder enviar la
+// campaña a licitación (cerrarIntenciones). Endpoint separado de
+// actualizar() porque ese sigue bloqueado fuera de BORRADOR y estas
+// campañas nacen ABIERTA (ver campanas.service.js cerrarIntenciones).
+export const completarRequisitosLicitacionSchema = z.object({
+  fechaEstimadaRecepcion: z.coerce.date(),
+  volumenMaximo: z.number().positive(),
+  modalidadesEntregaOfrecidas: z.array(z.enum(MODALIDAD_ENTREGA)).min(1),
+  formasPagoOfrecidas: z.array(z.enum(FORMA_PAGO)).min(1)
 });
 
 export const cancelarCampanaSchema = z.object({

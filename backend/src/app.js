@@ -22,6 +22,7 @@ import facturasRoutes from './modules/facturas/facturas.routes.js';
 import dashboardRoutes from './modules/dashboard/dashboard.routes.js';
 import remitosRoutes from './modules/remitos/remitos.routes.js';
 import pagosRoutes from './modules/pagos/pagos.routes.js';
+import resumenRoutes from './modules/resumen/resumen.routes.js';
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use('/api/entregas', entregasRoutes);
 app.use('/api/facturas', facturasRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/pagos', pagosRoutes);
+app.use('/api/resumen', resumenRoutes);
 
 // TODO: aquí van los routers del resto de módulos (los va a sumar cada fase)
 

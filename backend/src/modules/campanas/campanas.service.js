@@ -3,16 +3,19 @@ import { NotFoundError, ConflictError, ValidationError } from '../../utils/error
 import { eventBus } from '../../services/event-bus.service.js';
 import { puedeTransicionar } from '../../utils/transiciones-campana.js';
 
-export async function listar({ estado, tipo, productoId, page = 1, limit = 20 }) {
+export async function listar({ estado, tipo, productoId, loteId, vista, page = 1, limit = 20 }) {
   const where = {};
-  if (estado) where.estado = estado;
+  if (vista === 'agrupadas') where.estado = { in: ['ABIERTA', 'EN_LICITACION', 'ADJUDICADA'] };
+  else if (vista === 'concretadas') where.estado = 'CERRADA';
+  else if (estado) where.estado = estado;
   if (tipo) where.tipo = tipo;
   if (productoId) where.productoId = productoId;
+  if (loteId) where.loteId = loteId;
 
   const [data, total] = await Promise.all([
     prisma.campana.findMany({
       where,
-      include: { producto: true, _count: { select: { cotizaciones: true } } },
+      include: { producto: true, lote: true, _count: { select: { cotizaciones: true } } },
       take: limit,
       skip: (page - 1) * limit,
       orderBy: { createdAt: 'desc' }
@@ -28,6 +31,7 @@ export async function obtenerPorId(id) {
     where: { id },
     include: {
       producto: true,
+      lote: true,
       creadaPor: { select: { nombre: true, apellido: true } },
       _count: { select: { cotizaciones: true } }
     }
@@ -175,6 +179,18 @@ export async function cerrarIntenciones(id, { motivo } = {}) {
     throw new ConflictError(`No se puede pasar de ${campana.estado} a EN_LICITACION (tipo ${campana.tipo})`);
   }
 
+  // El proveedor tiene que cotizar sabiendo con qué condiciones va a pactar
+  // la compra: sin esto no hay forma de comunicárselo (regla nueva, antes
+  // estos campos eran opcionales y nunca se validaban).
+  const faltantes = [];
+  if (!campana.fechaEstimadaRecepcion) faltantes.push('fecha estimada de recepción');
+  if (!campana.volumenMaximo) faltantes.push('volumen máximo');
+  if (!campana.modalidadesEntregaOfrecidas) faltantes.push('modalidad(es) de entrega ofrecida(s)');
+  if (!campana.formasPagoOfrecidas) faltantes.push('forma(s) de pago aceptadas');
+  if (faltantes.length) {
+    throw new ValidationError(`Antes de enviar a licitación completá: ${faltantes.join(', ')}`);
+  }
+
   const stats = await prisma.intencionCompra.aggregate({
     where: { campanaId: id },
     _sum: { volumen: true }
@@ -193,6 +209,30 @@ export async function cerrarIntenciones(id, { motivo } = {}) {
   eventBus.emit('RFQ_ABIERTO', { campanaId: id, volumenConsolidado: volumenAcumulado });
 
   return actualizada;
+}
+
+/**
+ * Completa las condiciones que AUT ofrece/exige para esta compra puntual
+ * (requisito para poder pasar a EN_LICITACION vía cerrarIntenciones). Solo
+ * aplica a campañas ABIERTA: una vez en licitación esas condiciones ya se
+ * comunicaron al proveedor y no tiene sentido seguir editándolas acá.
+ */
+export async function completarRequisitosLicitacion(id, datos) {
+  const campana = await obtenerPorId(id);
+  if (campana.estado !== 'ABIERTA') {
+    throw new ConflictError('Solo se pueden completar los requisitos de licitación de una campaña ABIERTA');
+  }
+
+  return prisma.campana.update({
+    where: { id },
+    data: {
+      fechaEstimadaRecepcion: datos.fechaEstimadaRecepcion,
+      volumenMaximo: datos.volumenMaximo,
+      modalidadesEntregaOfrecidas: datos.modalidadesEntregaOfrecidas,
+      formasPagoOfrecidas: datos.formasPagoOfrecidas
+    },
+    include: { producto: true }
+  });
 }
 
 /**

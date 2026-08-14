@@ -28,6 +28,13 @@ export async function crear(req, res, next) {
   } catch (err) { next(err); }
 }
 
+export async function crearLote(req, res, next) {
+  try {
+    const resultado = await cotizacionesService.crearLote(req.body, req.usuario.id);
+    res.status(200).json(resultado); // { creadas, errores } — batch, no una única creación
+  } catch (err) { next(err); }
+}
+
 export async function actualizar(req, res, next) {
   try {
     const cotizacion = await cotizacionesService.actualizar(Number(req.params.id), req.body, req.usuario.id);

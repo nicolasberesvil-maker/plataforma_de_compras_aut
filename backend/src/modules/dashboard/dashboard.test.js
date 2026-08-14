@@ -79,6 +79,12 @@ async function crearOrdenParaProductor(sufijo, productor, { volumen = 100, preci
   const campanaId = crear.body.campana.id;
   await request(app).post(`/api/campanas/${campanaId}/abrir`).set('Authorization', `Bearer ${adminToken}`);
   await prisma.intencionCompra.create({ data: { campanaId, productorId: productor.id, productoId, volumen } });
+  await request(app).post(`/api/campanas/${campanaId}/requisitos-licitacion`).set('Authorization', `Bearer ${adminToken}`).send({
+    fechaEstimadaRecepcion: new Date(Date.now() + 10 * 86400000).toISOString(),
+    volumenMaximo: 5000,
+    modalidadesEntregaOfrecidas: ['RETIRO_EN_DEPOSITO'],
+    formasPagoOfrecidas: ['TRANSFERENCIA']
+  });
   await request(app).post(`/api/campanas/${campanaId}/cerrar-intenciones`).set('Authorization', `Bearer ${adminToken}`).send({});
 
   const proveedor = await crearProveedor(sufijo);

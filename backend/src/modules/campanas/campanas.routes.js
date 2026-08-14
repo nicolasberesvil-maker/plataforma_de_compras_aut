@@ -8,7 +8,8 @@ import {
   filtrosCampanaSchema,
   cancelarCampanaSchema,
   adjudicarDirectaSchema,
-  generarTandaSchema
+  generarTandaSchema,
+  completarRequisitosLicitacionSchema
 } from './campanas.schemas.js';
 
 const router = Router();
@@ -23,6 +24,7 @@ router.post('/', requireRole(['ADMIN']), validate(crearCampanaSchema), ctrl.crea
 router.patch('/:id', requireRole(['ADMIN']), validate(actualizarCampanaSchema), ctrl.actualizar);
 
 router.post('/:id/abrir', requireRole(['ADMIN']), ctrl.abrir);
+router.post('/:id/requisitos-licitacion', requireRole(['ADMIN']), validate(completarRequisitosLicitacionSchema), ctrl.completarRequisitosLicitacion);
 router.post('/:id/cerrar-intenciones', requireRole(['ADMIN']), ctrl.cerrarIntenciones);
 router.post('/:id/adjudicar-directa', requireRole(['ADMIN']), validate(adjudicarDirectaSchema), ctrl.adjudicarDirecta);
 router.post('/:id/generar-tanda', requireRole(['ADMIN']), validate(generarTandaSchema), ctrl.generarTanda);
