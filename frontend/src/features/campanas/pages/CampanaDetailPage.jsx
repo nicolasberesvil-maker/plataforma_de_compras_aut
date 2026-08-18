@@ -12,6 +12,7 @@ import { RequisitosLicitacionForm } from '../components/RequisitosLicitacionForm
 import { OrdenesTab } from '../components/OrdenesTab';
 import { RemitosTab } from '../components/RemitosTab';
 import { BackButton } from '../../../components/BackButton';
+import { Tabs } from '../../../components/Tabs';
 
 const TABS = [
   { id: 'ordenes', label: 'Órdenes de compra' },
@@ -35,7 +36,22 @@ export function CampanaDetailPage() {
   });
 
   const avisarProductores = useMutation({
-    mutationFn: () => campanasApi.avisarProductores(id)
+    mutationFn: () => campanasApi.avisarProductores(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['campanas', id] })
+  });
+
+  // Un solo click para el caso más común: publicar el pedido (BORRADOR →
+  // ABIERTA) y avisarle a los productores en el mismo paso, en vez de dos
+  // acciones separadas que un admin nuevo no sabe que tiene que encadenar.
+  const publicarYAvisar = useMutation({
+    mutationFn: async () => {
+      await campanasApi.abrir(id);
+      await campanasApi.avisarProductores(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campanas', id] });
+      queryClient.invalidateQueries({ queryKey: ['campanas'] });
+    }
   });
 
   useEffect(() => {
@@ -98,15 +114,25 @@ export function CampanaDetailPage() {
         )}
       </div>
 
+      {campana.estado === 'BORRADOR' && (
+        <button
+          onClick={() => publicarYAvisar.mutate()}
+          disabled={publicarYAvisar.isPending}
+          className="w-full bg-aut-verde text-white py-3 rounded-lg text-base font-semibold shadow-sm disabled:opacity-50"
+        >
+          {publicarYAvisar.isPending ? 'Publicando...' : '📣 Publicar pedido y avisar a productores'}
+        </button>
+      )}
+
       {faltanRequisitos && <RequisitosLicitacionForm campana={campana} />}
 
       {campana.estado === 'ABIERTA' && (
         <button
           onClick={() => avisarProductores.mutate()}
           disabled={avisarProductores.isPending}
-          className="w-full bg-aut-verde text-white py-3 rounded-lg text-sm font-semibold disabled:opacity-50"
+          className="w-full border border-aut-verde text-aut-verde py-2.5 rounded-lg text-sm font-medium disabled:opacity-50"
         >
-          {avisarProductores.isPending ? 'Avisando...' : avisarProductores.isSuccess ? 'Aviso enviado ✓' : 'Avisar a productores'}
+          {avisarProductores.isPending ? 'Avisando...' : avisarProductores.isSuccess ? 'Aviso reenviado ✓' : 'Volver a avisar a productores'}
         </button>
       )}
 
@@ -155,19 +181,7 @@ export function CampanaDetailPage() {
         <AccionesCampana campana={campana} />
       </div>
 
-      <div className="flex gap-2 border-b">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${
-              tab === t.id ? 'border-aut-verde text-aut-verde' : 'border-transparent text-gray-600'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={TABS} value={tab} onChange={setTab} />
 
       {tab === 'ordenes' && <OrdenesTab campanaId={campana.id} />}
       {tab === 'remitos' && <RemitosTab campana={campana} />}

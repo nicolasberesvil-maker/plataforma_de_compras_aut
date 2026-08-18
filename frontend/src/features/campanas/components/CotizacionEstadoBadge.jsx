@@ -7,7 +7,7 @@ const ESTILOS = {
 const ETIQUETAS = {
   SIN_COTIZAR: 'Sin cotizar',
   COTIZADO: 'Cotizado',
-  ADJUDICADO: 'Adjudicado'
+  ADJUDICADO: '✓ Pedido adjudicado'
 };
 
 /**

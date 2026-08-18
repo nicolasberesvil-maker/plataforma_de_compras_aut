@@ -22,6 +22,7 @@ export function registrarListenersNotificaciones() {
   eventBus.on('TANDA_GENERADA', onTandaGenerada);
   eventBus.on('RFQ_ABIERTO', onRfqAbierto);
   eventBus.on('CAMPANA_ADJUDICADA', onCampanaAdjudicada);
+  eventBus.on('ORDEN_COMPRA_ENVIADA_PROVEEDOR', onOrdenCompraEnviadaProveedor);
   eventBus.on('ORDEN_GENERADA', onOrdenGenerada);
   eventBus.on('COTIZACION_RECHAZADA', onCotizacionRechazada);
   eventBus.on('ENTREGA_EN_TRANSITO', onEntregaEnTransito);
@@ -222,6 +223,22 @@ async function onCampanaCancelada({ campanaId, motivo }) {
     }
   } catch (err) {
     logger.error({ err, campanaId }, 'Error notificando CAMPANA_CANCELADA');
+  }
+}
+
+/** El admin confirma manualmente el envío de la orden de compra al proveedor ganador. */
+async function onOrdenCompraEnviadaProveedor({ campanaId, proveedorUsuarioId, productoNombre, volumenTotalAdjudicado, precioFinalUnitario, unidadMedida }) {
+  try {
+    await notificacionesService.crearYEnviar({
+      usuarioId: proveedorUsuarioId,
+      tipo: 'ORDEN_COMPRA_ENVIADA_PROVEEDOR',
+      titulo: 'Orden de compra confirmada',
+      mensaje: `AUT confirmó tu orden de compra de "${productoNombre}": ${volumenTotalAdjudicado} ${unidadMedida} a $${precioFinalUnitario.toFixed(2)} por unidad.`,
+      enlaceRelativo: '/proveedor/mis-ventas',
+      metadatos: { campanaId }
+    });
+  } catch (err) {
+    logger.error({ err, campanaId }, 'Error notificando ORDEN_COMPRA_ENVIADA_PROVEEDOR');
   }
 }
 

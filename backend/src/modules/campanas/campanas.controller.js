@@ -77,6 +77,13 @@ export async function avisarProductores(req, res, next) {
   } catch (err) { next(err); }
 }
 
+export async function enviarOrdenProveedor(req, res, next) {
+  try {
+    await campanasService.enviarOrdenProveedor(Number(req.params.id));
+    res.status(204).send();
+  } catch (err) { next(err); }
+}
+
 export async function cancelar(req, res, next) {
   try {
     const campana = await campanasService.cancelar(Number(req.params.id), req.body.motivo);

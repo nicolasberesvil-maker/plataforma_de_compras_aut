@@ -29,6 +29,7 @@ router.post('/:id/cerrar-intenciones', requireRole(['ADMIN']), ctrl.cerrarIntenc
 router.post('/:id/adjudicar-directa', requireRole(['ADMIN']), validate(adjudicarDirectaSchema), ctrl.adjudicarDirecta);
 router.post('/:id/generar-tanda', requireRole(['ADMIN']), validate(generarTandaSchema), ctrl.generarTanda);
 router.post('/:id/avisar-productores', requireRole(['ADMIN']), ctrl.avisarProductores);
+router.post('/:id/enviar-orden-proveedor', requireRole(['ADMIN']), ctrl.enviarOrdenProveedor);
 router.post('/:id/cancelar', requireRole(['ADMIN']), validate(cancelarCampanaSchema), ctrl.cancelar);
 
 export default router;

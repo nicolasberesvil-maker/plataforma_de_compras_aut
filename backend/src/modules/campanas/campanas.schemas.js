@@ -24,10 +24,12 @@ export const filtrosCampanaSchema = z.object({
   tipo: z.enum(['COLECTIVA', 'DIRECTA', 'CONTINUA']).optional(),
   productoId: z.coerce.number().int().positive().optional(),
   loteId: z.coerce.number().int().positive().optional(),
-  // "agrupadas" = todavía no es una compra concretada (ABIERTA/EN_LICITACION/
-  // ADJUDICADA); "concretadas" = ya hay orden generada (CERRADA). Atajo para
-  // las pestañas de PedidosAdminPage sin repetir la lista de estados ahí.
-  vista: z.enum(['agrupadas', 'concretadas']).optional(),
+  // Atajos para las pestañas de PedidosAdminPage sin repetir la lista de
+  // estados ahí: "abiertas" = juntando pedidos, todavía no se mandó a
+  // cotizar; "en-licitacion" = ya se mandó a proveedores, cotizando o recién
+  // cotizado; "ordenes" = ya se adjudicó (hay orden de compra generada) o ya
+  // se cerró. "agrupadas"/"concretadas" quedan por compatibilidad.
+  vista: z.enum(['agrupadas', 'concretadas', 'abiertas', 'en-licitacion', 'ordenes']).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20)
 });

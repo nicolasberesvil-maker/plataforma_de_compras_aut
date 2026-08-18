@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { intencionesApi } from '../api/intenciones.api';
 import { AgruparPedidosModal } from '../components/AgruparPedidosModal';
+import { Tabs } from '../../../components/Tabs';
 
 const TABS = [
   { id: 'bandeja', label: 'Bandeja' },
@@ -72,19 +73,7 @@ export function BandejaPedidosPage() {
         )}
       </div>
 
-      <div className="flex gap-2 border-b">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${
-              tab === t.id ? 'border-aut-verde text-aut-verde' : 'border-transparent text-gray-600'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={TABS} value={tab} onChange={setTab} />
 
       {tab === 'bandeja' && (
         isLoading ? (

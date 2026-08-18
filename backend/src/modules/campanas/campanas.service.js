@@ -7,6 +7,9 @@ export async function listar({ estado, tipo, productoId, loteId, vista, page = 1
   const where = {};
   if (vista === 'agrupadas') where.estado = { in: ['ABIERTA', 'EN_LICITACION', 'ADJUDICADA'] };
   else if (vista === 'concretadas') where.estado = 'CERRADA';
+  else if (vista === 'abiertas') where.estado = 'ABIERTA';
+  else if (vista === 'en-licitacion') where.estado = 'EN_LICITACION';
+  else if (vista === 'ordenes') where.estado = { in: ['ADJUDICADA', 'CERRADA'] };
   else if (estado) where.estado = estado;
   if (tipo) where.tipo = tipo;
   if (productoId) where.productoId = productoId;
@@ -15,7 +18,12 @@ export async function listar({ estado, tipo, productoId, loteId, vista, page = 1
   const [data, total] = await Promise.all([
     prisma.campana.findMany({
       where,
-      include: { producto: true, lote: true, _count: { select: { cotizaciones: true } } },
+      include: {
+        producto: true,
+        lote: true,
+        _count: { select: { cotizaciones: true } },
+        adjudicacion: { select: { adjudicadaAt: true, cotizacionGanadora: { select: { createdAt: true } } } }
+      },
       take: limit,
       skip: (page - 1) * limit,
       orderBy: { createdAt: 'desc' }
@@ -332,6 +340,36 @@ export async function avisarProductores(id) {
   }
 
   eventBus.emit('COMPRA_ACTUALIZADA', { campanaId: id, productoId: campana.productoId });
+  return campana;
+}
+
+/**
+ * Le avisa al proveedor ganador que la orden de compra ya está confirmada
+ * (M6): hoy CAMPANA_ADJUDICADA solo notifica al equipo AUT, el proveedor no
+ * se entera de que ganó hasta que alguien lo llama. Puede reenviarse las
+ * veces que haga falta.
+ */
+export async function enviarOrdenProveedor(id) {
+  const campana = await obtenerPorId(id);
+  if (!['ADJUDICADA', 'CERRADA'].includes(campana.estado)) {
+    throw new ConflictError('La compra todavía no fue adjudicada');
+  }
+
+  const adjudicacion = await prisma.adjudicacion.findUnique({
+    where: { campanaId: id },
+    include: { cotizacionGanadora: { include: { proveedor: true } } }
+  });
+  if (!adjudicacion) throw new ConflictError('Esta compra no tiene adjudicación');
+
+  eventBus.emit('ORDEN_COMPRA_ENVIADA_PROVEEDOR', {
+    campanaId: id,
+    proveedorUsuarioId: adjudicacion.cotizacionGanadora.proveedor.usuarioId,
+    productoNombre: campana.producto.nombre,
+    volumenTotalAdjudicado: Number(adjudicacion.volumenTotalAdjudicado),
+    precioFinalUnitario: Number(adjudicacion.precioFinalUnitario),
+    unidadMedida: campana.producto.unidadMedida
+  });
+
   return campana;
 }
 

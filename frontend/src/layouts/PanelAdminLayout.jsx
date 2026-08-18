@@ -8,17 +8,38 @@ import { useAuthStore } from '../store/authStore';
 import { useLogout } from '../features/auth/hooks/useAuth';
 import { Campanita } from '../features/notificaciones/components/Campanita';
 
-const NAV_ITEMS = [
-  { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/admin/usuarios', label: 'Usuarios', icon: Users },
-  { to: '/admin/productores', label: 'Productores', icon: UserCircle },
-  { to: '/admin/proveedores', label: 'Proveedores', icon: Building2 },
-  { to: '/admin/productos', label: 'Productos', icon: Package },
-  { to: '/admin/pedidos', label: 'Pedidos', icon: Megaphone },
-  { to: '/admin/resumen', label: 'Resumen', icon: ClipboardList },
-  { to: '/admin/stock', label: 'Stock', icon: Warehouse },
-  { to: '/admin/facturas', label: 'Facturas', icon: Receipt },
-  { to: '/admin/pagos', label: 'Pagos', icon: Wallet }
+// Grupos fijos (siempre expandidos, sin acordeón) para que el admin vea todo
+// de un vistazo sin clicks extra. "single" = link suelto, "group" = sección
+// con subitems.
+const NAV_GROUPS = [
+  { type: 'single', to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  {
+    type: 'group',
+    label: 'Pedidos y Compras',
+    items: [
+      { to: '/admin/pedidos', label: 'Pedidos', icon: Megaphone },
+      { to: '/admin/ordenes', label: 'Órdenes de compra', icon: ClipboardList }
+    ]
+  },
+  {
+    type: 'group',
+    label: 'Recepción y Stock',
+    items: [
+      { to: '/admin/stock', label: 'Stock', icon: Warehouse }
+    ]
+  },
+  {
+    type: 'group',
+    label: 'Configuración',
+    items: [
+      { to: '/admin/usuarios', label: 'Usuarios', icon: Users },
+      { to: '/admin/productores', label: 'Productores', icon: UserCircle },
+      { to: '/admin/proveedores', label: 'Proveedores', icon: Building2 },
+      { to: '/admin/productos', label: 'Productos', icon: Package }
+    ]
+  },
+  { type: 'single', to: '/admin/facturas', label: 'Facturas', icon: Receipt },
+  { type: 'single', to: '/admin/pagos', label: 'Pagos', icon: Wallet }
 ];
 
 export function PanelAdminLayout() {
@@ -40,22 +61,23 @@ export function PanelAdminLayout() {
           <span className="font-bold text-aut-verde text-lg">Panel AUT</span>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={() => setSidebarAbierto(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive ? 'bg-aut-verde/10 text-aut-verde' : 'text-gray-600 hover:bg-gray-100'
-                }`
-              }
-            >
-              <Icon size={18} className="shrink-0" />
-              {label}
-            </NavLink>
-          ))}
+        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-3">
+          {NAV_GROUPS.map((entry) =>
+            entry.type === 'single' ? (
+              <NavItem key={entry.to} {...entry} onClick={() => setSidebarAbierto(false)} />
+            ) : (
+              <div key={entry.label}>
+                <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                  {entry.label}
+                </p>
+                <div className="space-y-0.5">
+                  {entry.items.map((item) => (
+                    <NavItem key={item.to} {...item} onClick={() => setSidebarAbierto(false)} />
+                  ))}
+                </div>
+              </div>
+            )
+          )}
         </nav>
 
         <div className="border-t p-3 shrink-0">
@@ -86,5 +108,22 @@ export function PanelAdminLayout() {
         </main>
       </div>
     </div>
+  );
+}
+
+function NavItem({ to, label, icon: Icon, onClick }) {
+  return (
+    <NavLink
+      to={to}
+      onClick={onClick}
+      className={({ isActive }) =>
+        `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+          isActive ? 'bg-aut-verde/10 text-aut-verde' : 'text-gray-600 hover:bg-gray-100'
+        }`
+      }
+    >
+      <Icon size={18} className="shrink-0" />
+      {label}
+    </NavLink>
   );
 }

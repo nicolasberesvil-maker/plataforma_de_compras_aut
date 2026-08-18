@@ -13,7 +13,7 @@ export function EntregasProveedorPage() {
       <div>
         <h2 className="text-lg font-bold">Mis entregas</h2>
         <p className="text-sm text-gray-500">
-          Las entregas en campo las confirmás vos o el productor; los retiros en depósito los confirma AUT.
+          Las entregas en campo las confirmás vos cuando las completás; los retiros en depósito los confirma AUT.
         </p>
       </div>
 

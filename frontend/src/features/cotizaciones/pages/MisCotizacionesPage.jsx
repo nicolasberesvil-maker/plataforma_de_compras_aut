@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { cotizacionesApi } from '../api/cotizaciones.api';
 import { EstadoCotizacionBadge, derivarEstadoCotizacion } from '../components/EstadoCotizacionBadge';
+import { Tabs } from '../../../components/Tabs';
 
 const FILTROS = [
   { id: 'TODAS', label: 'Todas' },
@@ -29,19 +30,7 @@ export function MisCotizacionesPage() {
         <p className="text-sm text-gray-500">Cotizada: todavía en evaluación. Aprobada: te la adjudicaron. Rechazada: eligieron otra oferta.</p>
       </div>
 
-      <div className="flex gap-2 border-b">
-        {FILTROS.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => setFiltro(f.id)}
-            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${
-              filtro === f.id ? 'border-aut-verde text-aut-verde' : 'border-transparent text-gray-600'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={FILTROS} value={filtro} onChange={setFiltro} />
 
       {isLoading ? (
         <p className="text-gray-500 text-sm">Cargando...</p>

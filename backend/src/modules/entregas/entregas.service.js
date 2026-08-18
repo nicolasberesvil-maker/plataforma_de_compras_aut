@@ -194,26 +194,15 @@ export async function confirmarRetiro(id, datos, usuarioId) {
 }
 
 /**
- * Confirma entrega en campo. Puede ejecutarla el ADMIN (si AUT coordinó y le
- * avisan) o el PRODUCTOR dueño de la entrega (regla D.5): cuando el
- * proveedor entrega directo en el campo, sin pasar por depósito de AUT, es el
- * productor quien está físicamente presente para confirmar que recibió la
- * mercadería — no tiene sentido obligarlo a esperar que un operador de AUT
- * lo cargue después. Por eso la autorización se resuelve en el controller
- * (`requireRole(['ADMIN']) OR ownership`), no acá: el service no conoce roles.
+ * Confirma entrega en campo. La ejecuta el ADMIN, el OPERADOR_DEPOSITO o el
+ * PROVEEDOR dueño de la venta — no el productor: quien entrega es quien
+ * confirma que entregó (regla revisada, ver EntregaCard.jsx).
  */
 export async function confirmarEntregaCampo(id, datos, usuario) {
   const entrega = await obtenerEntregaConValidacion(id, 'ENTREGADA');
 
   if (entrega.modalidad !== 'ENTREGA_EN_CAMPO') {
     throw new ValidationError('No es entrega tipo campo');
-  }
-
-  if (usuario.rol === 'PRODUCTOR') {
-    const productor = await prisma.productor.findUnique({ where: { usuarioId: usuario.id } });
-    if (!productor || entrega.productorId !== productor.id) {
-      throw new ForbiddenError('Solo el productor dueño de la entrega puede confirmarla');
-    }
   }
 
   if (usuario.rol === 'PROVEEDOR') {

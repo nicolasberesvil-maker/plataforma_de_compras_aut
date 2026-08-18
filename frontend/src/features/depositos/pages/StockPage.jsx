@@ -4,6 +4,7 @@ import { DepositosListPage } from './DepositosListPage';
 import { MovimientosStockPage } from './MovimientosStockPage';
 import { EntregasAdminPage } from '../../entregas/pages/EntregasAdminPage';
 import { TransferenciaStockForm } from '../components/TransferenciaStockForm';
+import { Tabs } from '../../../components/Tabs';
 
 const TABS = [
   { id: 'depositos', label: 'Depósitos' },
@@ -18,19 +19,7 @@ export function StockPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 border-b">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${
-              tab === t.id ? 'border-aut-verde text-aut-verde' : 'border-transparent text-gray-600'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={TABS} value={tab} onChange={setTab} />
 
       {tab === 'depositos' && <DepositosListPage />}
       {tab === 'movimientos' && <MovimientosStockPage />}

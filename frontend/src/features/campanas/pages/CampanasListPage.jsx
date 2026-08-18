@@ -1,49 +1,32 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { campanasApi } from '../api/campanas.api';
 import { TipoBadge } from '../components/TipoBadge';
 import { EstadoBadge } from '../components/EstadoBadge';
 import { CotizacionEstadoBadge } from '../components/CotizacionEstadoBadge';
 
 const TIPOS = ['COLECTIVA', 'DIRECTA', 'CONTINUA'];
-const ESTADOS = ['BORRADOR', 'ABIERTA', 'EN_LICITACION', 'ADJUDICADA', 'CERRADA', 'CANCELADA'];
 
-// vista: si viene ('agrupadas' | 'concretadas'), esta lista es una de las
-// pestañas de PedidosAdminPage — el filtro de estado queda fijo y se oculta,
-// el backend ya filtra por vista (ver campanas.service.js listar()).
+// Siempre se usa dentro de una de las pestañas de PedidosAdminPage /
+// OrdenesCompraAdminPage: vista fija el estado, así que acá solo queda
+// filtrar por tipo.
 export function CampanasListPage({ vista }) {
   const [tipo, setTipo] = useState('');
-  const [estado, setEstado] = useState('');
   const [page, setPage] = useState(1);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['campanas', { tipo, estado, vista, page }],
-    queryFn: () => campanasApi.listar({ tipo: tipo || undefined, estado: vista ? undefined : (estado || undefined), vista, page })
+    queryKey: ['campanas', { tipo, vista, page }],
+    queryFn: () => campanasApi.listar({ tipo: tipo || undefined, vista, page })
   });
 
   return (
     <div className="space-y-4">
-      {!vista && (
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">Compras</h2>
-          <Link to="/admin/campanas/nueva" className="bg-aut-verde text-white px-4 py-2 rounded-lg text-sm font-medium">
-            Nueva compra
-          </Link>
-        </div>
-      )}
-
       <div className="flex flex-wrap gap-3">
         <select value={tipo} onChange={(e) => { setTipo(e.target.value); setPage(1); }} className="border rounded-lg px-3 py-2 text-sm">
           <option value="">Todos los tipos</option>
           {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
-        {!vista && (
-          <select value={estado} onChange={(e) => { setEstado(e.target.value); setPage(1); }} className="border rounded-lg px-3 py-2 text-sm">
-            <option value="">Todos los estados</option>
-            {ESTADOS.map((e) => <option key={e} value={e}>{e}</option>)}
-          </select>
-        )}
       </div>
 
       {isLoading ? (
@@ -58,6 +41,8 @@ export function CampanasListPage({ vista }) {
                 <th className="py-2 px-3">Lote</th>
                 <th className="py-2 px-3">Tipo</th>
                 <th className="py-2 px-3">Estado</th>
+                <th className="py-2 px-3">Presupuesto</th>
+                <th className="py-2 px-3">Orden de compra</th>
                 <th className="py-2 px-3">Cierre</th>
                 <th className="py-2 px-3"></th>
               </tr>
@@ -76,12 +61,20 @@ export function CampanasListPage({ vista }) {
                     </div>
                   </td>
                   <td className="py-2 px-3 text-sm">
+                    {campana.adjudicacion?.cotizacionGanadora?.createdAt
+                      ? new Date(campana.adjudicacion.cotizacionGanadora.createdAt).toLocaleDateString('es-AR')
+                      : '—'}
+                  </td>
+                  <td className="py-2 px-3 text-sm">
+                    {campana.adjudicacion?.adjudicadaAt
+                      ? new Date(campana.adjudicacion.adjudicadaAt).toLocaleDateString('es-AR')
+                      : '—'}
+                  </td>
+                  <td className="py-2 px-3 text-sm">
                     {campana.fechaCierre ? new Date(campana.fechaCierre).toLocaleDateString('es-AR') : '—'}
                   </td>
                   <td className="py-2 px-3 text-sm text-right whitespace-nowrap">
-                    <Link to={`/admin/campanas/${campana.id}`} className="text-aut-verde font-medium">
-                      Ver
-                    </Link>
+                    <AccionCampana campana={campana} />
                   </td>
                 </tr>
               ))}
@@ -114,5 +107,52 @@ export function CampanasListPage({ vista }) {
         </div>
       )}
     </div>
+  );
+}
+
+// Una sola acción visible por fila, la que corresponde al siguiente paso del
+// pedido — así el admin no tiene que adivinar dónde está el botón.
+function AccionCampana({ campana }) {
+  const queryClient = useQueryClient();
+  const enviarOrden = useMutation({
+    mutationFn: () => campanasApi.enviarOrdenProveedor(campana.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['campanas'] })
+  });
+
+  if (campana.estado === 'ABIERTA') {
+    return (
+      <Link to={`/admin/campanas/${campana.id}`} className="bg-aut-verde text-white px-3 py-1.5 rounded-lg font-medium">
+        Enviar a proveedor →
+      </Link>
+    );
+  }
+
+  if (campana.estado === 'EN_LICITACION') {
+    return (
+      <Link
+        to={campana.tipo === 'COLECTIVA' ? `/admin/campanas/${campana.id}/comparador` : `/admin/campanas/${campana.id}`}
+        className="bg-sky-600 text-white px-3 py-1.5 rounded-lg font-medium"
+      >
+        Convertir a orden de compra →
+      </Link>
+    );
+  }
+
+  if (campana.estado === 'ADJUDICADA') {
+    return (
+      <button
+        onClick={() => enviarOrden.mutate()}
+        disabled={enviarOrden.isPending}
+        className="bg-aut-verde text-white px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
+      >
+        {enviarOrden.isPending ? 'Enviando...' : enviarOrden.isSuccess ? 'Enviada al proveedor ✓' : 'Enviar orden a proveedor →'}
+      </button>
+    );
+  }
+
+  return (
+    <Link to={`/admin/campanas/${campana.id}`} className="text-aut-verde font-medium">
+      Ver
+    </Link>
   );
 }

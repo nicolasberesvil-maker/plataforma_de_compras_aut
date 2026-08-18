@@ -23,7 +23,7 @@ router.get('/:id', ctrl.obtenerPorId);
 router.patch('/:id/en-transito', requireRole(['ADMIN', 'OPERADOR_DEPOSITO', 'PROVEEDOR']), validate(marcarEnTransitoSchema), ctrl.marcarEnTransito);
 router.patch('/:id/disponible', requireRole(['ADMIN', 'OPERADOR_DEPOSITO']), validate(marcarDisponibleSchema), ctrl.marcarDisponible);
 router.patch('/:id/confirmar-retiro', requireRole(['ADMIN', 'OPERADOR_DEPOSITO']), validate(confirmarRetiroSchema), ctrl.confirmarRetiro);
-router.patch('/:id/confirmar-entrega-campo', requireRole(['ADMIN', 'OPERADOR_DEPOSITO', 'PRODUCTOR', 'PROVEEDOR']), validate(confirmarEntregaCampoSchema), ctrl.confirmarEntregaCampo);
+router.patch('/:id/confirmar-entrega-campo', requireRole(['ADMIN', 'OPERADOR_DEPOSITO', 'PROVEEDOR']), validate(confirmarEntregaCampoSchema), ctrl.confirmarEntregaCampo);
 router.patch('/:id/cancelar', requireRole(['ADMIN', 'OPERADOR_DEPOSITO']), validate(cancelarEntregaSchema), ctrl.cancelar);
 
 export default router;

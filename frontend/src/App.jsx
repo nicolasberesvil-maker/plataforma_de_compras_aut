@@ -10,7 +10,6 @@ import { ProveedorDetailPage } from './features/usuarios/pages/ProveedorDetailPa
 import { MiPerfilPage } from './features/perfil/pages/MiPerfilPage';
 import { ProductosListPage } from './features/productos/pages/ProductosListPage';
 import { ProductoFormPage } from './features/productos/pages/ProductoFormPage';
-import { CampanasListPage } from './features/campanas/pages/CampanasListPage';
 import { CampanaFormPage } from './features/campanas/pages/CampanaFormPage';
 import { CampanaDetailPage } from './features/campanas/pages/CampanaDetailPage';
 import { CampanasAbiertasPage } from './features/campanas/pages/CampanasAbiertasPage';
@@ -18,6 +17,7 @@ import { PedirProductoPage } from './features/intenciones/pages/PedirProductoPag
 import { MisPedidosPage } from './features/intenciones/pages/MisPedidosPage';
 import { CampanaProductorDetailPage } from './features/intenciones/pages/CampanaProductorDetailPage';
 import { PedidosAdminPage } from './features/pedidos/pages/PedidosAdminPage';
+import { OrdenesCompraAdminPage } from './features/campanas/pages/OrdenesCompraAdminPage';
 import { ResumenPedidosAdminPage } from './features/resumen/pages/ResumenPedidosAdminPage';
 import { CampanasParaCotizarPage } from './features/cotizaciones/pages/CampanasParaCotizarPage';
 import { CotizacionFormPage } from './features/cotizaciones/pages/CotizacionFormPage';
@@ -96,6 +96,7 @@ export default function App() {
             <Route path="productos/nuevo" element={<ProductoFormPage />} />
             <Route path="productos/:id/editar" element={<ProductoFormPage />} />
             <Route path="pedidos" element={<PedidosAdminPage />} />
+            <Route path="ordenes" element={<OrdenesCompraAdminPage />} />
             <Route path="resumen" element={<ResumenPedidosAdminPage />} />
             <Route path="campanas" element={<Navigate to="/admin/pedidos" replace />} />
             <Route path="solicitudes" element={<Navigate to="/admin/pedidos" replace />} />

@@ -16,7 +16,6 @@ export function AccionesCampana({ campana }) {
     queryClient.invalidateQueries({ queryKey: ['campanas', campana.id] });
   };
 
-  const abrir = useMutation({ mutationFn: () => campanasApi.abrir(campana.id), onSuccess: invalidar });
   const cerrarIntenciones = useMutation({ mutationFn: () => campanasApi.cerrarIntenciones(campana.id), onSuccess: invalidar });
   const adjudicarDirecta = useMutation({
     mutationFn: (datos) => campanasApi.adjudicarDirecta(campana.id, datos),
@@ -30,18 +29,14 @@ export function AccionesCampana({ campana }) {
     mutationFn: (motivo) => campanasApi.cancelar(campana.id, motivo),
     onSuccess: () => { invalidar(); setFormActivo(null); }
   });
+  const enviarOrden = useMutation({ mutationFn: () => campanasApi.enviarOrdenProveedor(campana.id), onSuccess: invalidar });
 
   const puede = (estado) => disponibles.includes(estado);
-  const pending = abrir.isPending || cerrarIntenciones.isPending || adjudicarDirecta.isPending || generarTanda.isPending || cancelar.isPending;
+  const pending = cerrarIntenciones.isPending || adjudicarDirecta.isPending || generarTanda.isPending || cancelar.isPending || enviarOrden.isPending;
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        {puede('ABIERTA') && (
-          <button onClick={() => abrir.mutate()} disabled={pending} className="bg-aut-verde text-white px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50">
-            Abrir
-          </button>
-        )}
         {puede('EN_LICITACION') && (
           <button onClick={() => cerrarIntenciones.mutate()} disabled={pending} className="bg-aut-verde text-white px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50">
             Enviar a licitación
@@ -54,8 +49,13 @@ export function AccionesCampana({ campana }) {
         )}
         {puede('ADJUDICADA') && campana.tipo === 'COLECTIVA' && (
           <Link to={`/admin/campanas/${campana.id}/comparador`} className="bg-sky-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">
-            Comparar y adjudicar
+            Convertir a orden de compra
           </Link>
+        )}
+        {campana.estado === 'ADJUDICADA' && (
+          <button onClick={() => enviarOrden.mutate()} disabled={pending || enviarOrden.isPending} className="bg-aut-verde text-white px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50">
+            {enviarOrden.isPending ? 'Enviando...' : enviarOrden.isSuccess ? 'Orden enviada ✓' : 'Enviar orden a proveedor'}
+          </button>
         )}
         {campana.tipo === 'CONTINUA' && campana.estado === 'ABIERTA' && (
           <button onClick={() => setFormActivo('tanda')} disabled={pending} className="bg-sky-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50">
